@@ -13,6 +13,11 @@
 
 package org.opentripplanner.analyst.batch;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import lombok.Getter;
+
 import org.opentripplanner.analyst.core.Sample;
 import org.opentripplanner.routing.spt.ShortestPathTree;
 import org.slf4j.Logger;
@@ -22,9 +27,13 @@ import org.slf4j.LoggerFactory;
 public class ResultSet {
 
     private static final Logger LOG = LoggerFactory.getLogger(ResultSet.class);
+    enum Set { TRAVELTIME, HOPS };
+    private static Set set;
 
     public Population population;
-    public double[] results;
+    //public double[] results;
+    @Getter public double[] results = getTraveltime();
+    public Map<String, double[]> resultMap;
     
     public static ResultSet forTravelTimes(Population population, ShortestPathTree spt) {
         double[] results = new double[population.size()];
@@ -44,14 +53,43 @@ public class ResultSet {
         return new ResultSet(population, results);
     }
     
+    public static ResultSet newResultSet(Population population, ShortestPathTree spt) {
+
+    	Map<String, double[]> resultMap = new HashMap<String, double[]>();
+    	
+    	switch (set) {
+	        case TRAVELTIME:
+	            break;
+	        case HOPS:
+	            break;
+	        default:
+	        	break;
+        }
+    	
+    	return new ResultSet(population, resultMap);
+    }
+   
+    public double[] getTraveltime(){
+    	return resultMap.get("TRAVELTIME");
+    }
+    
+    public ResultSet(Population population, Map<String, double[]> resultMap) {
+        this.population = population;
+        this.resultMap = resultMap;
+    }
+    
     public ResultSet(Population population, double[] results) {
         this.population = population;
-        this.results = results;
+        //this.results = results;
+        resultMap = new HashMap<String, double[]>();
+        resultMap.put("TRAVELTIME", results);
     }
     
     protected ResultSet(Population population) {
         this.population = population;
-        this.results = new double[population.size()];
+        //this.results = new double[population.size()];
+        resultMap = new HashMap<String, double[]>();
+        resultMap.put("TRAVELTIME", new double[population.size()]);
     }
 
     public void writeAppropriateFormat(String outFileName) {
