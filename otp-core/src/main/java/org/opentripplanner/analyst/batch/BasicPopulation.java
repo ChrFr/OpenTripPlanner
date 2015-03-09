@@ -78,6 +78,42 @@ public class BasicPopulation implements Population {
     public int size() {
         return this.individuals.size();
     }
+    
+    protected void writeMultipleResultsCsv(String outFileName, ResultSet results) {
+        LOG.debug("Writing population to CSV: {}", outFileName);
+        try {
+            CsvWriter writer = new CsvWriter(outFileName, ',', Charset.forName("UTF8"));
+            List <String> header = new ArrayList<String>();
+            header.add("label");
+            header.add("input");
+            
+            for(String key: results.resultMap.keySet())
+            	header.add(key.toLowerCase());
+            
+            writer.writeRecord( header.toArray(new String[0]));
+            
+            int i = 0;
+            int j = 0;
+            // using internal list rather than filtered iterator
+            for (Individual indiv : this.individuals) {
+                if ( ! this.skip[i]) {
+                	List <String> entries = new ArrayList<String>();
+                	entries.add(indiv.label);
+                	entries.add(Double.toString(indiv.input));
+                	for(double[] values: results.resultMap.values())
+                		entries.add(Double.toString(values[j]));
+                    writer.writeRecord(entries.toArray(new String[0]));
+                    j++;
+                }
+                i++;
+            }
+            writer.close(); // flush writes and close
+        } catch (Exception e) {
+            LOG.error("Error while writing to CSV file: {}", e.getMessage());
+            return;
+        }
+        LOG.debug("Done writing population to CSV at {}.", outFileName);
+    }
         
     protected void writeCsv(String outFileName, ResultSet results) {
         LOG.debug("Writing population to CSV: {}", outFileName);
@@ -109,7 +145,7 @@ public class BasicPopulation implements Population {
     @Override
     public void writeAppropriateFormat(String outFileName, ResultSet results) {
         // as a default, save to CSV. override this method in subclasses when more is known about data structure.
-        this.writeCsv(outFileName, results);
+        this.writeMultipleResultsCsv(outFileName, results);
     }
 
     // TODO maybe store skip values in the samples themselves?
