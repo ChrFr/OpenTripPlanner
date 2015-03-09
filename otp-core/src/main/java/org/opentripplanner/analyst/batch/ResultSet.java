@@ -13,7 +13,9 @@
 
 package org.opentripplanner.analyst.batch;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import lombok.Getter;
@@ -26,14 +28,21 @@ import org.slf4j.LoggerFactory;
 // store output outside individuals so populations can be reused
 public class ResultSet {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ResultSet.class);
-    enum Set { TRAVELTIME, HOPS };
-    private static Set set;
+    private static final Logger LOG = LoggerFactory.getLogger(ResultSet.class);    
+    
+    public static final String[] AVAILABLERESULTS = new String[]{
+    	"TRAVELTIME" , "TRANSFERS", "BLA", "TEST"
+    };
+    
+    public final static String DEFAULTRESULT = "TRAVELTIME";
+    
+    public static String resultModes = DEFAULTRESULT;
 
     public Population population;
     //public double[] results;
-    @Getter public double[] results = getTraveltime();
-    public Map<String, double[]> resultMap;
+    public Map<String, double[]> resultMap;    
+
+    public double[] results;
     
     public static ResultSet forTravelTimes(Population population, ShortestPathTree spt) {
         double[] results = new double[population.size()];
@@ -54,42 +63,88 @@ public class ResultSet {
     }
     
     public static ResultSet newResultSet(Population population, ShortestPathTree spt) {
-
-    	Map<String, double[]> resultMap = new HashMap<String, double[]>();
-    	
-    	switch (set) {
-	        case TRAVELTIME:
-	            break;
-	        case HOPS:
-	            break;
-	        default:
-	        	break;
-        }
+    	Map<String, double[]> resultMap = computeResults(population, spt); 
     	
     	return new ResultSet(population, resultMap);
+    }   
+    
+    private static Map<String, double[]> computeResults(Population population, ShortestPathTree spt){    	
+    	Map<String, double[]> resultMap = new HashMap<String, double[]>();
+    	
+    	List<String> modelist = Arrays.asList(AVAILABLERESULTS);     	
+    	for (String mode : resultModes.split(",")) {
+    		mode = mode.trim();
+            if (mode.length() == 0 || !modelist.contains(mode)) {
+                continue;
+            }
+            resultMap.put(mode, new double[population.size()]);
+        }
+    	
+    	int i = 0;
+        for (Individual individual : population){
+            for(String key: resultMap.keySet()){
+            	double result = 0;
+            	if(key.equals("TRAVELTIME"))
+            		result = travelTime(individual, spt);
+            	else if(key.equals("TRANSFERS"))
+            		result = transferCount(individual, spt);
+            	resultMap.get(key)[i] = result;
+            }
+            i++;
+        }
+    	return resultMap;
+    }
+    
+    private static double travelTime(Individual individual, ShortestPathTree spt){
+    	Sample s = individual.sample;
+        long t = Long.MAX_VALUE;
+        if (s == null)
+            t = -2;
+        else
+            t = s.eval(spt);
+        if (t == Long.MAX_VALUE)
+            t = -1;
+        return t;
+    }
+    
+    private static double transferCount(Individual individual, ShortestPathTree spt){
+        return 0;
+    }
+    
+    public void setResultModes(String rm){
+    	resultModes = rm;
     }
    
-    public double[] getTraveltime(){
-    	return resultMap.get("TRAVELTIME");
+    public double[] getResults(){
+    	if(resultMap == null)
+    		return null;
+    	return resultMap.get(DEFAULTRESULT);
+    }
+    
+    public ResultSet() {
+        this.population = null;
+        this.results = null;
+        this.resultMap = new HashMap<String, double[]>();;
     }
     
     public ResultSet(Population population, Map<String, double[]> resultMap) {
         this.population = population;
         this.resultMap = resultMap;
+        this.results = getResults();
     }
     
     public ResultSet(Population population, double[] results) {
         this.population = population;
-        //this.results = results;
+        this.results = results;
         resultMap = new HashMap<String, double[]>();
-        resultMap.put("TRAVELTIME", results);
+        resultMap.put(DEFAULTRESULT, results);
     }
     
     protected ResultSet(Population population) {
         this.population = population;
-        //this.results = new double[population.size()];
+        this.results = new double[population.size()];
         resultMap = new HashMap<String, double[]>();
-        resultMap.put("TRAVELTIME", new double[population.size()]);
+        resultMap.put(DEFAULTRESULT, new double[population.size()]);
     }
 
     public void writeAppropriateFormat(String outFileName) {
