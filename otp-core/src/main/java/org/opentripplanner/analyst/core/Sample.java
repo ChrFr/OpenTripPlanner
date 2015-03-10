@@ -27,6 +27,16 @@ public class Sample {
         this.v1 = v1;
         this.t1 = t1;
     }
+    
+    public double startTime(ShortestPathTree spt){
+    	State s0 = spt.getState(v0);
+    	return s0.getTimeInMillis();
+    }
+    
+    public double arrivalTime(ShortestPathTree spt){
+    	State s1 = spt.getState(v1);
+    	return s1.getTimeInMillis();
+    }
 
     public byte evalBoardings(ShortestPathTree spt) {
         State s0 = spt.getState(v0);

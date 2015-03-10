@@ -87,7 +87,7 @@ public class BasicPopulation implements Population {
             header.add("label");
             header.add("input");
             
-            for(String key: results.resultMap.keySet())
+            for(String key: results.getResults().keySet())
             	header.add(key.toLowerCase());
             
             writer.writeRecord( header.toArray(new String[0]));
@@ -100,8 +100,8 @@ public class BasicPopulation implements Population {
                 	List <String> entries = new ArrayList<String>();
                 	entries.add(indiv.label);
                 	entries.add(Double.toString(indiv.input));
-                	for(double[] values: results.resultMap.values())
-                		entries.add(Double.toString(values[j]));
+                	for(Result result: results.getResults().values())
+                		entries.add(result.getString(i));
                     writer.writeRecord(entries.toArray(new String[0]));
                     j++;
                 }
