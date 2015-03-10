@@ -13,7 +13,10 @@
 
 package org.opentripplanner.analyst.batch;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.TimeZone;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -155,7 +158,7 @@ public class BatchProcessor {
                 }
                 ++nCompleted;
                 projectRunTime(nCompleted, nTasks);
-            }
+            }            
         } catch (InterruptedException e) {
             LOG.warn("run was interrupted after {} tasks", nCompleted);
         }
@@ -164,6 +167,30 @@ public class BatchProcessor {
             accumulator.finish();
         if (aggregateResultSet != null)
             aggregateResultSet.writeAppropriateFormat(outputPath);
+        
+        //concatenate output files
+        int i = 0;
+        String outFile = outputPath.replace("{}", "");
+        try {
+        	PrintStream  out = new PrintStream (outFile);
+	        for (Individual oi : origins) { // using filtered iterator
+	            String subName = nameOutput(i, oi);
+	            BufferedReader br = new BufferedReader(new FileReader(subName));
+	            String line;
+	            int j = 0;
+	            while((line = br.readLine()) != null) {
+	                if(!(i>0 && j==0)){
+	                	out.println(line);
+	                }
+	            	j++;
+	            }
+	            i++;
+	        }
+	        out.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} 
+        
         LOG.info("DONE.");
     }
 
@@ -233,7 +260,11 @@ public class BatchProcessor {
         LOG.info("successfully linked {} individuals out of {}", nonNull, n);
     }
         
-    /** 
+    private String nameOutput(int count, Individual origin) {
+		return outputPath.replace("{}", String.format("%d_%s", count, origin.label));
+	}
+
+	/** 
      * A single computation to perform for a single origin.
      * Runnable, not Callable. We want accumulation to happen in the worker thread. 
      * Handling all accumulation in the controller thread risks amassing a queue of large 
@@ -256,8 +287,7 @@ public class BatchProcessor {
             if (req != null) {
                 ShortestPathTree spt = sptService.getShortestPathTree(req);
                 // ResultSet should be a local to avoid memory leak
-                ResultSet results = ResultSet.newResultSet(destinations, spt);
-                //double[] bla = results.getTraveltime();
+                ResultSet results = ResultSet.newResultSet(oi, destinations, spt);
                 req.cleanup();
                 switch (mode) {
                 case ACCUMULATE:
@@ -269,7 +299,7 @@ public class BatchProcessor {
                     aggregateResultSet.results[i] = aggregator.computeAggregate(results);
                     break;
                 default:
-                    String subName = outputPath.replace("{}", String.format("%d_%s", i, oi.label));
+                    String subName = nameOutput(i, oi);
                     results.writeAppropriateFormat(subName);
                 }
                     

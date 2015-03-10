@@ -28,13 +28,16 @@ public class ResultSet {
     public Population population;
     public double[] results;
     
-    private Map<String, Result> resultMap;        
+    private Map<String, Result> resultMap;    
+    private Individual origin;
 
     public final static String DEFAULTRESULT = "TRAVELTIME";
 
-    public static ResultSet newResultSet(Population population, ShortestPathTree spt) {
-    	Map<String, Result> resultMap = Result.newResults(population, spt);     	
-    	return new ResultSet(population, resultMap);
+    public static ResultSet newResultSet(Individual origin, Population population, ShortestPathTree spt) {
+    	Map<String, Result> resultMap = Result.newResults(population, spt);   
+    	ResultSet set = new ResultSet(population, resultMap);
+    	set.setOrigin(origin);
+    	return set;
     } 
     
     public Map<String, Result> getResults(){
@@ -75,5 +78,13 @@ public class ResultSet {
     public void writeAppropriateFormat(String outFileName) {
         population.writeAppropriateFormat(outFileName, this);
     }
+
+	public Individual getOrigin() {
+		return origin;
+	}
+
+	public void setOrigin(Individual origin) {
+		this.origin = origin;
+	}
     
 }

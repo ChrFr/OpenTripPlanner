@@ -82,9 +82,10 @@ public class BasicPopulation implements Population {
     protected void writeMultipleResultsCsv(String outFileName, ResultSet results) {
         LOG.debug("Writing population to CSV: {}", outFileName);
         try {
-            CsvWriter writer = new CsvWriter(outFileName, ',', Charset.forName("UTF8"));
+            CsvWriter writer = new CsvWriter(outFileName, ';', Charset.forName("UTF8"));
             List <String> header = new ArrayList<String>();
-            header.add("label");
+            header.add("origin");
+            header.add("destination");
             header.add("input");
             
             for(String key: results.getResults().keySet())
@@ -92,12 +93,15 @@ public class BasicPopulation implements Population {
             
             writer.writeRecord( header.toArray(new String[0]));
             
+            Individual origin = results.getOrigin();
+            
             int i = 0;
             int j = 0;
             // using internal list rather than filtered iterator
             for (Individual indiv : this.individuals) {
                 if ( ! this.skip[i]) {
                 	List <String> entries = new ArrayList<String>();
+                	entries.add(origin.label);
                 	entries.add(indiv.label);
                 	entries.add(Double.toString(indiv.input));
                 	for(Result result: results.getResults().values())
