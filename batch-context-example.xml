@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-2.5.xsd">
+
+    <context:annotation-config />
+
+    <bean class="org.opentripplanner.analyst.request.SampleFactory">
+        <property name="searchRadiusM" value="500" />
+    </bean>
+    <bean class="org.opentripplanner.routing.impl.DefaultRemainingWeightHeuristicFactoryImpl"/>
+    <bean class="org.opentripplanner.routing.algorithm.GenericAStar"/>
+    <bean class="org.opentripplanner.analyst.core.GeometryIndex" />
+
+    <bean id="graphService" class="org.opentripplanner.routing.impl.GraphServiceImpl">
+        <property name="path" value="F:\ggr Projekte\otp" />
+        <property name="defaultRouterId" value="sf" />
+    </bean>
+
+    <bean id="origins" class="org.opentripplanner.analyst.batch.CSVPopulation">
+        <property name="sourceFilename" value="F:\ggr Projekte\otp\BatchAnalyst\origins.csv" />
+        <property name="labelCol" value="0" />
+        <property name="latCol" value="1" />
+        <property name="lonCol" value="2" />
+        <property name="inputCol" value="3" />
+    </bean>
+    <bean id="destinations" class="org.opentripplanner.analyst.batch.CSVPopulation">
+        <property name="sourceFilename" value="F:\ggr Projekte\otp\BatchAnalyst\destinations.csv" />
+        <property name="labelCol" value="0" />
+        <property name="latCol" value="1" />
+        <property name="lonCol" value="2" />
+        <property name="inputCol" value="3" />
+    </bean>
+
+    <bean id="batchProcessor" class="org.opentripplanner.analyst.batch.BatchProcessor">
+		<property name="date" value="2014-11-25" />
+        <property name="time" value="14:00" />
+        <property name="timeZone" value="Europe/Berlin" />
+        <property name="outputPath" value="F:\ggr Projekte\otp\BatchAnalyst\output\output_{}.csv" />
+       
+        <!--
+        <property name="aggregator">
+            <bean class="org.opentripplanner.analyst.batch.aggregator.ThresholdSumAggregator">
+                <property name="threshold" value="60000" />
+            </bean>
+        </property>
+        -->
+    </bean>
+	
+	<bean id="results" class="org.opentripplanner.analyst.batch.Result">
+        <property name="resultModes" value="BOARDINGS, TRAVELTIME, STARTTIME, ARRIVALTIME" />
+    </bean>
+	
+    <bean id="prototypeRoutingRequest" class="org.opentripplanner.routing.core.RoutingRequest">
+            <property name="maxWalkDistance" value="2000" />
+            <property name="clampInitialWait" value="1800" />
+            <property name="arriveBy" value="false" />
+            <property name="modes" value="WALK,TRANSIT" />
+    </bean>
+
+</beans>

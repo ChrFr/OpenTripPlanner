@@ -88,8 +88,18 @@ public class Result {
     		Date date = new Date((long)value);
     		str = date.toString();
     	}
-    	else if(mode.equals("TRAVELTIME") || mode.equals("BOARDINGS"))
+    	else if(mode.equals("BOARDINGS"))
     		str = Double.toString(value);
+    	else if(mode.equals("TRAVELTIME")){   
+    		int hours = (int)value / 3600;
+    		int rest = (int)value % 3600; 
+    		int minutes = rest / 60; 
+    		int seconds = rest % 60; 
+
+    		str = ( (hours < 10 ? "0" : "") + hours 
+    				+ ":" + (minutes < 10 ? "0" : "") + minutes 
+    				+ ":" + (seconds < 10 ? "0" : "") + seconds );     		 
+        }
     	return str;
     }
     
