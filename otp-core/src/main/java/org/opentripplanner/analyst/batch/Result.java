@@ -11,6 +11,7 @@ import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.spt.GraphPath;
 import org.opentripplanner.routing.spt.ShortestPathTree;
+import org.opentripplanner.routing.vertextype.OnboardDepartVertex;
 
 public class Result {
 	private double[] values;
@@ -149,9 +150,15 @@ public class Result {
         return s.getTimeSeconds(); 
     }
     
-    private static byte boardings(Vertex v, ShortestPathTree spt) {
+    private static int boardings(Vertex v, ShortestPathTree spt) {
         State s = spt.getState(v);
-        return (byte) (s.getNumBoardings()); 
+        int boardings = s.getNumBoardings();
+        //TODO: transfers or boardings? (transfers = boardings - 1 if not started onboard)
+//    	GraphPath path = spt.getPath(v, false);
+//        if (boardings > 0 && !(path.states.getFirst().getVertex() instanceof OnboardDepartVertex)) {
+//        	boardings--;
+//        }
+        return boardings; 
     }
     
     private static long traveltime(Vertex v, ShortestPathTree spt) {
