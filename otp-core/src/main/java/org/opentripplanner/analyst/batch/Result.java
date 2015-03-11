@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.opentripplanner.analyst.core.Sample;
+import org.opentripplanner.routing.core.State;
+import org.opentripplanner.routing.graph.Vertex;
+import org.opentripplanner.routing.spt.GraphPath;
 import org.opentripplanner.routing.spt.ShortestPathTree;
 
 public class Result {
@@ -14,10 +17,12 @@ public class Result {
 	private String[] strings;	
 
     public static final String[] AVAILABLERESULTS = new String[]{
-    	"TRAVELTIME" , "BOARDINGS", "STARTTIME", "ARRIVALTIME"
+    	"TRAVELTIME", "BOARDINGS", "STARTTIME", "ARRIVALTIME", "WALKINGDISTANCE"
     };
         
     private static String resultModes = "TRAVELTIME";
+    
+    private static String bestMode = "TRAVELTIME";
 
     public static Map<String, Result> newResults(Population population, ShortestPathTree spt){    	
     	Map<String, Result> resultMap = new HashMap<String, Result>();
@@ -34,9 +39,19 @@ public class Result {
         for (Individual individual : population){
             for(String mode: resultMap.keySet()){
             	Sample s = individual.sample;
-                Result result = resultMap.get(mode);
-                double value = getValue(mode, s, spt);
+            	Vertex best = evaluate(s, spt);
+            	
+            	double value;
+                if (s == null)
+                	value = -2;
+                else
+                	value = getValue(mode, best, spt);          	
+                if (value == Long.MAX_VALUE)
+                	value = -1;
+                
                 String str = toString(mode, value);
+
+                Result result = resultMap.get(mode);
                 result.setResults(i, value);
                 result.setStrings(i, str);
             }
@@ -55,7 +70,16 @@ public class Result {
     	int i = 0;
         for (Individual individual : population){
         	Sample s = individual.sample;
-            double value = getValue(mode, s, spt);
+        	Vertex best = evaluate(s, spt);
+        	
+        	double value;
+            if (s == null)
+            	value = -2;
+            else
+            	value = getValue(mode, best, spt);          	
+            if (value == Long.MAX_VALUE)
+            	value = -1;
+            
             String str = toString(mode, value);
             result.setResults(i, value);
             result.setStrings(i, str);
@@ -64,32 +88,37 @@ public class Result {
     	return result;
     }
     
-    private static double getValue(String mode, Sample s, ShortestPathTree spt){
+    /**
+     * get the "best" close vertex to a destination depending on what is defined
+     * as bestResult
+     */
+    public static Vertex evaluate(Sample s, ShortestPathTree spt){
+    	double value0 = getValue(bestMode, s.v0, spt);
+    	double value1 = getValue(bestMode, s.v1, spt);    	
+    	return (value0 < value1) ? s.v0 : s.v1;
+    }
+    
+    private static double getValue(String mode, Vertex v, ShortestPathTree spt){
     	double value = Long.MAX_VALUE;
-        if (s == null)
-        	value = -2;
-        else
-        	if(mode.equals("STARTTIME"))
-        		value = s.startTime(spt);
-        	else if(mode.equals("ARRIVALTIME"))
-        		value = s.arrivalTime(spt);
-        	else if(mode.equals("TRAVELTIME"))
-        		value = s.eval(spt);
-        	else if(mode.equals("BOARDINGS"))
-        		value = s.evalBoardings(spt);        	
-        if (value == Long.MAX_VALUE)
-        	value = -1;
+    	if(mode.equals("STARTTIME"))
+    		value = startTime(v, spt);
+    	else if(mode.equals("ARRIVALTIME"))
+    		value = arrivalTime(v, spt);
+    	else if(mode.equals("TRAVELTIME"))
+    		value = traveltime(v, spt);
+    	else if(mode.equals("BOARDINGS"))
+    		value = boardings(v, spt);  
+    	else if(mode.equals("WALKINGDISTANCE"))
+    		value = walkingDistance(v, spt);     
         return value;
     }
     
     private static String toString(String mode, double value){
     	String str = null;
     	if(mode.equals("STARTTIME") || mode.equals("ARRIVALTIME")){
-    		Date date = new Date((long)value);
+    		Date date = new Date((long)value * 1000);
     		str = date.toString();
     	}
-    	else if(mode.equals("BOARDINGS"))
-    		str = Double.toString(value);
     	else if(mode.equals("TRAVELTIME")){   
     		int hours = (int)value / 3600;
     		int rest = (int)value % 3600; 
@@ -100,7 +129,34 @@ public class Result {
     				+ ":" + (minutes < 10 ? "0" : "") + minutes 
     				+ ":" + (seconds < 10 ? "0" : "") + seconds );     		 
         }
+    	else
+    		str = Double.toString(value);
     	return str;
+    }    
+
+    private static long startTime(Vertex v, ShortestPathTree spt){
+    	GraphPath path = spt.getPath(v, true);
+    	return path.getStartTime();
+    }
+    
+    private static long walkingDistance(Vertex v, ShortestPathTree spt){
+    	State s = spt.getState(v);
+    	return (long)s.getWalkDistance();
+    }
+    
+    private static long arrivalTime(Vertex v, ShortestPathTree spt){
+    	State s = spt.getState(v);
+        return s.getTimeSeconds(); 
+    }
+    
+    private static byte boardings(Vertex v, ShortestPathTree spt) {
+        State s = spt.getState(v);
+        return (byte) (s.getNumBoardings()); 
+    }
+    
+    private static long traveltime(Vertex v, ShortestPathTree spt) {
+        State s = spt.getState(v);
+        return s.getActiveTime();  //TODO + t
     }
     
     public Result(){
@@ -133,6 +189,10 @@ public class Result {
     public void setResultModes(String rm){
     	resultModes = rm;
     }
+
+	public void setBestMode(String mode) {
+		bestMode = mode;
+	}
 
 	public double[] getValues() {
 		return values;

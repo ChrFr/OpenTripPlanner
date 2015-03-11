@@ -15,6 +15,7 @@ package org.opentripplanner.analyst.core;
 
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.graph.Vertex;
+import org.opentripplanner.routing.spt.GraphPath;
 import org.opentripplanner.routing.spt.ShortestPathTree;
 
 public class Sample {
@@ -26,17 +27,7 @@ public class Sample {
         this.t0 = t0;
         this.v1 = v1;
         this.t1 = t1;
-    }
-    
-    public double startTime(ShortestPathTree spt){
-    	State s0 = spt.getState(v0);
-    	return s0.getTimeInMillis();
-    }
-    
-    public double arrivalTime(ShortestPathTree spt){
-    	State s1 = spt.getState(v1);
-    	return s1.getTimeInMillis();
-    }
+    }    
 
     public byte evalBoardings(ShortestPathTree spt) {
         State s0 = spt.getState(v0);

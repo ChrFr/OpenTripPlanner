@@ -49,7 +49,8 @@
     </bean>
 	
 	<bean id="results" class="org.opentripplanner.analyst.batch.Result">
-        <property name="resultModes" value="BOARDINGS, TRAVELTIME, STARTTIME, ARRIVALTIME" />
+        <property name="resultModes" value="BOARDINGS, TRAVELTIME, STARTTIME, ARRIVALTIME, WALKINGDISTANCE" />
+        <property name="bestMode" value="TRAVELTIME" />
     </bean>
 	
     <bean id="prototypeRoutingRequest" class="org.opentripplanner.routing.core.RoutingRequest">
