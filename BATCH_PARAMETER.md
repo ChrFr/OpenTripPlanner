@@ -21,7 +21,7 @@
 
 ### org.opentripplanner.analyst.batch.Result
 
-**resultModes** 
+**resultTypes** 
   * bestimmt, welche Ergebnisse in den csv-Dateien ausgegeben werden 
   * *BOARDINGS* - Einstiege in Verkehrsmittel
   * *TRAVELTIME* - gesamte Zeit des Trips
@@ -29,8 +29,8 @@
   * *ARRIVALTIME* - Ankunftszeit des Trips
   * *WALKINGDISTANCE* - Distanz, die auf dem Trip zu Fuß zurückgelegt wurde
 
-**bestMode** 
-  * Modus (*siehe resultModes*), der bestimmt, welcher nächstgelegene Knoten als günstiger erachtet wird
+**bestResultType** 
+  * Typ (*siehe resultTypes*), der bestimmt, welcher nächstgelegene Knoten als günstiger erachtet wird
   
 
 ### org.opentripplanner.routing.core.RoutingRequest (Auszug der wichtigsten Properties)
@@ -52,6 +52,7 @@
 **modes**
   * Verkehrsmittel, die auf dem Trip genutzt werden dürfen
   * *WALK, BICYCLE, CAR, TRAM, SUBWAY, RAIL, BUS, FERRY, CABLE_CAR, GONDOLA, FUNICULAR, TRANSIT, TRAINISH, BUSISH, LEG_SWITCH, CUSTOM_MOTOR_VEHICLE* (Fahrzeug, das benutzerdefinierte Konfiguration benötigt, z.B. Trucks, Motorräder, Airport-Shuttle);
+  * Achtung: keine Freizeichen erlaubt!
     
 **parkAndRide**
   * Park and Ride erlauben (wenn *true*)
@@ -70,6 +71,7 @@
 
 **maxWalkDistance** 
   * maximale Distanz (*in Metern*), die zu Fuß zurückgelegt werden darf (auf der ganzen Strecke)
+  * weiches Maximum, wird schrittweise erhöht, wenn keine Route dieses erfüllt
   * default: Double.MAX_VALUE
   
 **worstTime**
