@@ -287,7 +287,7 @@ public class BatchProcessor {
             if (req != null) {
                 ShortestPathTree spt = sptService.getShortestPathTree(req);
                 // ResultSet should be a local to avoid memory leak
-                ResultSet results = ResultSet.newResultSet(oi, destinations, spt);
+                ResultSet results = ResultSet2D.newResultSet2D(oi, destinations, spt);
                 req.cleanup();
                 switch (mode) {
                 case ACCUMULATE:

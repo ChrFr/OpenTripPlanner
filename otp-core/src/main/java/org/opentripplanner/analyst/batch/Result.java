@@ -11,28 +11,26 @@
  You should have received a copy of the GNU General Public License
  along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-/**
- * @author Franke, Christoph <franke@ggr-planung.de>
- */
+
 
 package org.opentripplanner.analyst.batch;
 
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import org.opentripplanner.analyst.core.Sample;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.spt.GraphPath;
 import org.opentripplanner.routing.spt.ShortestPathTree;
-import org.opentripplanner.routing.vertextype.OnboardDepartVertex;
 
+/**
+ * @author Franke, Christoph <franke@ggr-planung.de>
+ */
 public class Result {
 	private double[] values;
 	private String[] strings;	
+	private String type;
 
 	/**
 	 * all available types of results, that can be calculated and written as outputs
@@ -41,126 +39,84 @@ public class Result {
     	"TRAVELTIME", "BOARDINGS", "STARTTIME", "ARRIVALTIME", "WALKINGDISTANCE"
     };
         
-    private static String resultTypes = "TRAVELTIME";
-    
-    private static String bestResultType = "TRAVELTIME";
-    
-    /**
-	 * all available types of results, that can be calculated and written as outputs
-	 * 
-	 * @param
-	 * @
-	 */
-    public static Map<String, Result> newResults(final Population population, final ShortestPathTree spt){    	
-    	Map<String, Result> resultMap = new HashMap<String, Result>();
-    	
-    	List<String> modelist = Arrays.asList(AVAILABLERESULTTYPES);     	
-    	for (String mode : resultTypes.split(",")) {
-    		mode = mode.trim();
-            if (mode.length() == 0 || !modelist.contains(mode)) {
-                continue;
-            }
-            resultMap.put(mode, new Result(population.size()));
-        }    	
-    	int i = 0;
-        for (Individual individual : population){
-        	Sample s = individual.sample;
-        	Vertex best = evaluate(s, spt);
-            for(String mode: resultMap.keySet()){
-            	
-            	double value;
-                if (best == null)
-                	value = -2;
-                else
-                	value = getValue(mode, best, spt);          	
-                if (value == Long.MAX_VALUE)
-                	value = -1;
-                
-                String str = toString(mode, value);
-
-                Result result = resultMap.get(mode);
-                result.setResults(i, value);
-                result.setStrings(i, str);
-            }
-            i++;
-        }
-    	return resultMap;
+    public Result(final String type){
+    	this.type = type;    	
+    	this.values = new double[0];
+    	this.strings = new String[0];
     }
     
-    public static Result newResult(final String mode, final Population population, final ShortestPathTree spt){    	
-    	Result result = new Result(population.size());
+    public Result(final String type, int size){
+    	this.type = type;    	
+    	this.values = new double[size];
+    	Arrays.fill(values, -2);
+    	this.strings = new String[size];
+    	Arrays.fill(strings, "-");
     	
-    	List<String> modelist = Arrays.asList(AVAILABLERESULTTYPES); 
-    	if (mode.length() == 0 || !modelist.contains(mode))
-    		return result;
-    	
-    	int i = 0;
-        for (Individual individual : population){
-        	Sample s = individual.sample;
-        	Vertex best = evaluate(s, spt);
-        	
-        	double value;
-            if (best == null)
-            	value = -2;
-            else
-            	value = getValue(mode, best, spt);          	
-            if (value == Long.MAX_VALUE)
-            	value = -1;
-            
-            String str = toString(mode, value);
-            result.setResults(i, value);
-            result.setStrings(i, str);
-            i++;
-        }
-    	return result;
     }
     
-    /**
-     * get the "best" close route vertex to a destination 
-     * depending on what is defined as bestResult
-     */
-    public static Vertex evaluate(final Sample s, final ShortestPathTree spt){
-    	if(s == null) return null;
-    	
-    	State s0 = spt.getState(s.v0);   
-    	State s1 = spt.getState(s.v1);
-    	//no states near sample -> no adjacent route
-    	if ( s0 == null && s1 == null)
-    		return null;
-    	
-    	double value0 = Double.MAX_VALUE;
-    	double value1 = Double.MAX_VALUE;
-    	if ( s0 != null) value0 = getValue(bestResultType, s.v0, spt);
-    	if ( s1 != null) value1 = getValue(bestResultType, s.v1, spt); 
-    	
-    	return (value0 < value1) ? s.v0 : s.v1;
+    public Result(final String type, double[] values){
+    	this.type = type;    	
+    	this.values = values;
+    	strings = new String[values.length];
+    	for(int i = 0; i < values.length; i++){
+    		strings[i] = valueToString(values[i]);
+    	}
     }
     
-    private static double getValue(final String mode, final Vertex v, final ShortestPathTree spt){
+    public Result(final String type, double[] values, String[] strings){
+    	this.type = type;    	
+    	this.values = values;
+    	this.strings = strings;
+    }
+        
+    public void insertVertex(final int pos, final Vertex v, final ShortestPathTree spt){ 
+    	double value = evaluate(type, v, spt);
+    	values[pos] = value;   	
+    	strings[pos] = valueToString(value);
+    }
+        
+    private static double evaluate(final String type, final Vertex v, final ShortestPathTree spt){
     	double value = Long.MAX_VALUE;
-    	if(mode.equals("STARTTIME"))
+    	if(type.equals("STARTTIME"))
     		value = startTime(v, spt);
-    	else if(mode.equals("ARRIVALTIME"))
+    	else if(type.equals("ARRIVALTIME"))
     		value = arrivalTime(v, spt);
-    	else if(mode.equals("TRAVELTIME"))
+    	else if(type.equals("TRAVELTIME"))
     		value = traveltime(v, spt);
-    	else if(mode.equals("BOARDINGS"))
+    	else if(type.equals("BOARDINGS"))
     		value = boardings(v, spt);  
-    	else if(mode.equals("WALKINGDISTANCE"))
-    		value = walkingDistance(v, spt);     
-        return value;
+    	else if(type.equals("WALKINGDISTANCE"))
+    		value = walkingDistance(v, spt); 
+    	return value;
     }
     
-    private static String toString(final String mode, final double value){
+    protected static Vertex evaluate(final String type, final Sample s, final ShortestPathTree spt){
+		if(s == null) return null;
+		
+		State s0 = spt.getState(s.v0);   
+		State s1 = spt.getState(s.v1);
+		//no states near sample -> no adjacent route
+		if ( s0 == null && s1 == null)
+			return null;
+		
+		double value0 = Double.MAX_VALUE;
+		double value1 = Double.MAX_VALUE;
+		if ( s0 != null) value0 = evaluate(type, s.v0, spt);
+		if ( s1 != null) value1 = evaluate(type, s.v1, spt); 
+		
+		return (value0 < value1) ? s.v0 : s.v1;
+    }
+    
+    private String valueToString(final double value){
     	String str = "-";
     	//TODO: are there values < 0? (atm indicating no route found)
     	//e.g. pre 1970 would be negative
     	if (value >= 0)
-	    	if(mode.equals("STARTTIME") || mode.equals("ARRIVALTIME")){
+	    	if(type.equals("STARTTIME") || type.equals("ARRIVALTIME")){
 	    		Date date = new Date((long)value * 1000);
 	    		str = date.toString();
 	    	}
-	    	else if(mode.equals("TRAVELTIME")){   
+	    	else if(type.equals("TRAVELTIME")){   
 	    		int hours = (int)value / 3600;
 	    		int rest = (int)value % 3600; 
 	    		int minutes = rest / 60; 
@@ -173,7 +129,12 @@ public class Result {
 	    	else
 	    		str = Double.toString(value);
     	return str;
-    }    
+    }
+    
+    public void addVertices(Vertex[] vertices, final ShortestPathTree spt){
+    	for(int i = 0; i < vertices.length; i++)
+    		insertVertex(i, vertices[i], spt);
+    }
 
     private static long startTime(final Vertex v, final ShortestPathTree spt){
     	GraphPath path = spt.getPath(v, true);
@@ -206,46 +167,6 @@ public class Result {
         return s.getActiveTime();  //TODO + t
     }
     
-    public Result(){
-    	this.values = null;
-    	this.strings = null;
-    }
-    
-    public Result(final int size){
-    	this.values = new double[size];
-    	this.strings = new String[size];
-    }
-    
-    public Result(final double[] results){
-    	this.values = results;
-    	for(int i = 0; i < results.length; i++)
-    		this.strings[i] = Double.toString(results[i]);
-    }
-    
-    public Result(final String mode, final double[] results){
-    	this.values = results;
-    	for(int i = 0; i < results.length; i++)
-    		this.strings[i] = toString(mode, results[i]);
-    }
-    
-    public Result(final double[] results, final String[] strings){
-    	this.values = results;
-    	this.strings = strings;
-    }
-    
-    /**
-     * set the types of results, that will be calculated and written to csv
-     * 
-     * @param rm The comma-seperated types, leading or trailing spaces don't matter e.g. "TRAVELTIME, ARRIVALTIME"
-     */        
-    public void setResultTypes(final String rm){
-    	resultTypes = rm;
-    }
-
-	public void setBestResultType(final String mode) {
-		bestResultType = mode;
-	}
-
 	public double[] getValues() {
 		return values;
 	}
@@ -272,6 +193,14 @@ public class Result {
 	
 	public void setStrings(final int pos, final String str) {
 		this.strings[pos] = str;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
 	}
 
 }

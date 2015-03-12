@@ -79,7 +79,7 @@ public class BasicPopulation implements Population {
         return this.individuals.size();
     }
     
-    protected void writeMultipleResultsCsv(String outFileName, ResultSet results) {
+    protected void writeMultipleResultsCsv(String outFileName, ResultSet2D results) {
         LOG.debug("Writing population to CSV: {}", outFileName);
         try {
             CsvWriter writer = new CsvWriter(outFileName, ';', Charset.forName("UTF8"));
@@ -88,15 +88,14 @@ public class BasicPopulation implements Population {
             header.add("destination");
             header.add("input");
             
-            for(String key: results.getResults().keySet())
-            	header.add(key.toLowerCase());
+            for(Result result: results.getResults())
+            	header.add(result.getType().toLowerCase());
             
             writer.writeRecord( header.toArray(new String[0]));
             
             Individual origin = results.getOrigin();
             
             int i = 0;
-            int j = 0;
             // using internal list rather than filtered iterator
             for (Individual indiv : this.individuals) {
                 if ( ! this.skip[i]) {
@@ -104,10 +103,9 @@ public class BasicPopulation implements Population {
                 	entries.add(origin.label);
                 	entries.add(indiv.label);
                 	entries.add(Double.toString(indiv.input));
-                	for(Result result: results.getResults().values())
+                	for(Result result: results.getResults())
                 		entries.add(result.getString(i));
                     writer.writeRecord(entries.toArray(new String[0]));
-                    j++;
                 }
                 i++;
             }
@@ -149,7 +147,10 @@ public class BasicPopulation implements Population {
     @Override
     public void writeAppropriateFormat(String outFileName, ResultSet results) {
         // as a default, save to CSV. override this method in subclasses when more is known about data structure.
-        this.writeMultipleResultsCsv(outFileName, results);
+        if (ResultSet2D.class.isInstance(results))
+        	this.writeMultipleResultsCsv(outFileName, (ResultSet2D)results);
+        else
+            this.writeCsv(outFileName, results);
     }
 
     // TODO maybe store skip values in the samples themselves?

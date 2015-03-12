@@ -19,7 +19,7 @@
   * benötigt "{}" im Namen (wird ersetzt)
   
 
-### org.opentripplanner.analyst.batch.Result
+### org.opentripplanner.analyst.batch.ResultSet2D
 
 **resultTypes** 
   * bestimmt, welche Ergebnisse in den csv-Dateien ausgegeben werden 
@@ -28,9 +28,11 @@
   * *STARTTIME* - Beginn des Trips
   * *ARRIVALTIME* - Ankunftszeit des Trips
   * *WALKINGDISTANCE* - Distanz, die auf dem Trip zu Fuß zurückgelegt wurde
+  * default: "TRAVELTIME"
 
 **bestResultType** 
   * Typ (*siehe resultTypes*), der bestimmt, welcher nächstgelegene Knoten als günstiger erachtet wird
+  * default: "TRAVELTIME"
   
 
 ### org.opentripplanner.routing.core.RoutingRequest (Auszug der wichtigsten Properties)
