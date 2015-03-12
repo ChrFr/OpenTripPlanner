@@ -20,6 +20,10 @@
   
 
 ### org.opentripplanner.analyst.batch.ResultSet2D
+  
+**defaultResult**
+  * bestimmt, welcher Ergebnistyp als Standardausgabe verwendet wird (betrifft Aggregatoren etc.)
+  * default: "TRAVELTIME"
 
 **resultTypes** 
   * bestimmt, welche Ergebnisse in den csv-Dateien ausgegeben werden 
@@ -28,11 +32,11 @@
   * *STARTTIME* - Beginn des Trips
   * *ARRIVALTIME* - Ankunftszeit des Trips
   * *WALKINGDISTANCE* - Distanz, die auf dem Trip zu Fuß zurückgelegt wurde
-  * default: "TRAVELTIME"
+  * default: defaultResult
 
 **bestResultType** 
   * Typ (*siehe resultTypes*), der bestimmt, welcher nächstgelegene Knoten als günstiger erachtet wird
-  * default: "TRAVELTIME"
+  * default: defaultResult
   
 
 ### org.opentripplanner.routing.core.RoutingRequest (Auszug der wichtigsten Properties)

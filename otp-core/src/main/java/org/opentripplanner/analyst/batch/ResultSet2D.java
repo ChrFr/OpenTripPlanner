@@ -29,17 +29,17 @@ public class ResultSet2D extends ResultSet{
     
     private Individual origin;
 
-    public final static String DEFAULTRESULT = "TRAVELTIME";
+    private static String defaultResult = "TRAVELTIME";
+
+	private static String resultTypes = defaultResult;
     
-    private static String resultTypes = DEFAULTRESULT;
-    
-    private static String bestResultType = DEFAULTRESULT;
+    private static String bestResultType = defaultResult;
     
     /**
      * factory for creating a new resultset holding all results defined by the resultTypes
      * for the given population in the shortest path tree
      */  
-    public static ResultSet newResultSet2D(Individual origin, Population population, ShortestPathTree spt) {
+    public static ResultSet newResultSet2D(final Individual origin, final Population population, final ShortestPathTree spt) {
     	Result[] results = newResults(population, spt);   
     	ResultSet2D set = new ResultSet2D(population, results);
     	set.setOrigin(origin);
@@ -97,20 +97,20 @@ public class ResultSet2D extends ResultSet{
     public ResultSet2D(final Population population, Result[] results) {
     	super(population);
         this.results2D = results;
-        this.results = getResult(DEFAULTRESULT).getValues();
+        this.results = getResult(defaultResult).getValues();
     }
     
     public ResultSet2D(final Population population, double[] results) {
     	super(population, results);
         results2D = new Result[1];
-        results2D[0] = new Result(DEFAULTRESULT, results);
+        results2D[0] = new Result(defaultResult, results);
     }
     
     protected ResultSet2D(final Population population) {
     	super(population);
         results = new double[population.size()];
         results2D = new Result[1];
-        results2D[0] = new Result(DEFAULTRESULT, results);
+        results2D[0] = new Result(defaultResult, results);
     }
 
     @Override
@@ -140,8 +140,12 @@ public class ResultSet2D extends ResultSet{
 		return origin;
 	}
 
-	public void setOrigin(Individual origin) {
+	public void setOrigin(final Individual origin) {
 		this.origin = origin;
+	}
+    
+    public static void setDefaultResult(String defaultResult) {
+		ResultSet2D.defaultResult = defaultResult;
 	}
 
 }

@@ -48,16 +48,16 @@
         -->
     </bean>
 	
-	<bean id="results" class="org.opentripplanner.analyst.batch.Result">
-        <property name="resultModes" value="BOARDINGS, TRAVELTIME, STARTTIME, ARRIVALTIME, WALKINGDISTANCE" />
-        <property name="bestMode" value="TRAVELTIME" />
+	<bean id="results" class="org.opentripplanner.analyst.batch.ResultSet2D">
+        <property name="resultTypes" value="BOARDINGS, TRAVELTIME, STARTTIME, ARRIVALTIME, WALKINGDISTANCE" />
+        <property name="bestResultType" value="TRAVELTIME" />
     </bean>
 	
     <bean id="prototypeRoutingRequest" class="org.opentripplanner.routing.core.RoutingRequest">
             <property name="maxWalkDistance" value="2000" />
             <property name="clampInitialWait" value="1800" />
             <property name="arriveBy" value="false" />
-            <property name="modes" value="WALK,TRANSIT" />
+            <property name="modes" value="TRANSIT" />
     </bean>
 
 </beans>
