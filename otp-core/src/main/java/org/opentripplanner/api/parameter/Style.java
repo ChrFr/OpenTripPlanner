@@ -15,6 +15,7 @@ package org.opentripplanner.api.parameter;
 public enum Style {
     GRAY,
     COLOR30,
+    GGRSTYLE,
     DIFFERENCE, 
     TRANSPARENT,
     MASK,

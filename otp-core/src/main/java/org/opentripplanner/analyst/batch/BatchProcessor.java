@@ -14,6 +14,7 @@
 package org.opentripplanner.analyst.batch;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -166,30 +167,35 @@ public class BatchProcessor {
         if (accumulator != null)
             accumulator.finish();
         if (aggregateResultSet != null)
-            aggregateResultSet.writeAppropriateFormat(outputPath);
+            aggregateResultSet.writeAppropriateFormat(outputPath.replace("{}", "aggregiert"));
         
         //concatenate output files
-        int i = 0;
-        String outFile = outputPath.replace("{}", "");
-        try {
-        	PrintStream  out = new PrintStream (outFile);
-	        for (Individual oi : origins) { // using filtered iterator
-	            String subName = nameOutput(i, oi);
-	            BufferedReader br = new BufferedReader(new FileReader(subName));
-	            String line;
-	            int j = 0;
-	            while((line = br.readLine()) != null) {
-	                if(!(i>0 && j==0)){
-	                	out.println(line);
-	                }
-	            	j++;
-	            }
-	            i++;
-	        }
-	        out.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} 
+        if (accumulator == null && aggregator == null){
+	        int i = 0;
+	        String outFile = outputPath.replace("{}", "gesamt");
+	        try {
+	        	PrintStream  out = new PrintStream (outFile);
+		        for (Individual oi : origins) { 
+		            String subName = nameOutput(i, oi);
+		            BufferedReader br = new BufferedReader(new FileReader(subName));
+		            String line;
+		            int j = 0;
+		            while((line = br.readLine()) != null) {
+		                if(!(i>0 && j==0)){
+		                	out.println(line);
+		                }
+		            	j++;
+		            }
+		            br.close();
+			        //delete file
+			        (new File(subName)).delete();
+		            i++;
+		        }
+		        out.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} 
+    	}
         
         LOG.info("DONE.");
     }

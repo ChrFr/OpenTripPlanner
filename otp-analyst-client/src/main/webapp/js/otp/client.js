@@ -220,7 +220,7 @@ function mapSetupTool() {
 	switch($('#searchTypeSelect').val()) {
 	case 'single':
 		params.layers = 'traveltime';
-		params.styles = 'color30';
+		params.styles = 'ggrstyle';
 		break;
 	case 'ppa':
 		params.layers = 'hagerstrand';

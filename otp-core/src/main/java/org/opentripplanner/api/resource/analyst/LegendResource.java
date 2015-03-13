@@ -39,7 +39,7 @@ public class LegendResource {
     @PathParam("format")  String format; 
     @QueryParam("width")  @DefaultValue("300") int width; 
     @QueryParam("height") @DefaultValue("150") int height;
-    @QueryParam("styles")  @DefaultValue("color30") StyleList styles;
+    @QueryParam("styles")  @DefaultValue("ggrstyle") StyleList styles;
 
     @GET @Produces("image/*")
     public Response tileGet() throws Exception { 

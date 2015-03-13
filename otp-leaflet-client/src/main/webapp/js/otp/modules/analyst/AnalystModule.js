@@ -100,7 +100,7 @@ otp.modules.analyst.AnalystModule =
 	    var params = { 
 		    batch : true,
 		    layers : 'traveltime',
-		    styles : 'color30',
+		    styles : 'ggrstyle',
 		    
             time : (this.time) ? this.time : moment().format("h:mma"),
             date : (this.date) ? this.date : moment().format("MM-DD-YYYY"),

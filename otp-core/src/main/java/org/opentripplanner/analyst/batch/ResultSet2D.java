@@ -144,8 +144,8 @@ public class ResultSet2D extends ResultSet{
 		this.origin = origin;
 	}
     
-    public static void setDefaultResult(String defaultResult) {
-		ResultSet2D.defaultResult = defaultResult;
+    public void setDefaultResult(final String type) {
+		defaultResult = type;
 	}
 
 }
