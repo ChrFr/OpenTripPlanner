@@ -13,6 +13,9 @@
 
 **timeZone**
   * Zeitzone (z.B. "Europe/Berlin" für Deutschland)
+  
+**searchCutoffSeconds**
+  * maximale Reisezeit (*in Sekunden*)
 
 **outputPath** 
   * Pfad und Name der csv-Dateien mit den Ergebnissen 
@@ -80,10 +83,6 @@
   * weiches Maximum, wird schrittweise erhöht, wenn keine Route dieses erfüllt
   * default: Double.MAX_VALUE
   
-**worstTime**
-  * maximaler akzeptabler Zeitpunkt (in Sekunden seit 1.1.1970 0:00)
-  * späteste Ankunft ohne bzw. früheste Abfahrt bei *arriveBy*
-
 **maxPreTransitTime**
   * maximale Anreisezeit (*in Sekunden*) zu anderen Verkehrsmitteln mit Park and Ride oder Kiss and Ride
   * default: Integer.MAX_VALUE
