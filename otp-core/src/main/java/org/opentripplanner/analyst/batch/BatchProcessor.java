@@ -168,7 +168,8 @@ public class BatchProcessor {
             accumulator.finish();
         if (aggregateResultSet != null)
             aggregateResultSet.writeAppropriateFormat(outputPath.replace("{}", "aggregiert"));
-        
+
+        LOG.info("concatenating results");
         //concatenate output files
         if (accumulator == null && aggregator == null){
 	        int i = 0;
@@ -177,6 +178,9 @@ public class BatchProcessor {
 	        	PrintStream  out = new PrintStream (outFile);
 		        for (Individual oi : origins) { 
 		            String subName = nameOutput(i, oi);
+		            File f = new File(subName);
+		            if(!f.exists())
+		            	continue;
 		            BufferedReader br = new BufferedReader(new FileReader(subName));
 		            String line;
 		            int j = 0;
