@@ -101,10 +101,10 @@ public abstract class Tile {
     
     private static final IndexColorModel ICM_BLUE_TO_YELLOW_15 = interpolatedColorMap( new int[][] { 
         {0,     0,   0,   102, 255},  
-        {30,    0, 204,     0, 255},  
-        {60,  255, 255,   102, 255},
-        {90,  255, 255,   102,   0},
-        {120,   0,   0,     0,   0},
+        {45,    0, 204,     0, 255},  
+        {90,  255, 255,   102, 255},
+        {120,  255, 255,   102,   0},
+        {180,   0,   0,     0,   0},
     }); 
     
     private static final IndexColorModel ICM_STEP_COLOR_15 = interpolatedColorMap( new int[][] { 
