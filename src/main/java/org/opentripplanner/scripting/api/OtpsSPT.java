@@ -34,9 +34,9 @@ import org.opentripplanner.routing.spt.ShortestPathTree;
  */
 public class OtpsSPT {
 
-    private ShortestPathTree spt;
+	protected ShortestPathTree spt;
 
-    private SampleFactory sampleFactory;
+    protected SampleFactory sampleFactory;
 
     protected OtpsSPT(ShortestPathTree spt, SampleFactory sampleFactory) {
         this.spt = spt;

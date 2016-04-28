@@ -13,6 +13,8 @@
 
 package org.opentripplanner.scripting.api;
 
+import java.util.List;
+
 import org.opentripplanner.analyst.batch.aggregator.Aggregator;
 import org.opentripplanner.analyst.batch.aggregator.ThresholdCumulativeAggregator;
 import org.opentripplanner.analyst.batch.aggregator.ThresholdSumAggregator;
@@ -54,9 +56,14 @@ public class OtpsAggregate {
 		this.aggregator = aggregator;
 	}
 	
-	public double computeAggregate(OtpsResultSet results){
+	public double computeAggregate(OtpsResultSet resultSet){
 		if(aggregator == null)
 			throw new IllegalStateException();
-		return aggregator.computeAggregate(results);
+		return aggregator.computeAggregate(resultSet.resultSet);
+	}
+	
+	public double computeAggregate(List<OtpsEvaluatedIndividual> evaluatedIndividuals){
+		OtpsResultSet resultSet = new OtpsResultSet(evaluatedIndividuals, "");
+		return computeAggregate(resultSet);
 	}
 }

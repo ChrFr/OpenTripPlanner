@@ -14,6 +14,7 @@
 package org.opentripplanner.scripting.api;
 
 import org.opentripplanner.analyst.batch.Individual;
+import org.opentripplanner.analyst.batch.Population;
 
 import java.util.List;
 
@@ -21,32 +22,49 @@ import org.opentripplanner.analyst.batch.BasicPopulation;
 import org.opentripplanner.analyst.batch.ResultSet;
 
 /**
- * A set of results, basically used for aggregations/accumulations
+ * A set of results, used for wrapping results for aggregations/accumulations
  * 
  * @author Christoph Franke
  */
-public class OtpsResultSet extends ResultSet {
+public class OtpsResultSet{
+	
+	protected ResultSet resultSet;
+	
+	private static void addOtpsIndividual(Population population, OtpsIndividual individual, String labelField, String inputField){
+		OtpsLatLon pos = individual.getLocation();	
+		
+		Double input = (inputField != null)? individual.getFloatData(inputField): new Double(0);	
+		if (input == null)
+			throw new IllegalArgumentException("Field " + inputField + " not found");
+		
+		String label = individual.getStringData(labelField);			
+		Individual bla = new Individual((label != null)? label: "not found", pos.getLon(), pos.getLat(), input);
+		population.addIndividual(bla);
+	}
 
 	// WARNING: results are empty
-	public OtpsResultSet(OtpsPopulation population, String inputField, String idField) {
-		super(new BasicPopulation());
+	public OtpsResultSet(OtpsPopulation population, String labelField, String inputField) {
+		Population basicPop = new BasicPopulation();
 		for(OtpsIndividual individual: population){
-			OtpsLatLon pos = individual.getLocation();
-			Individual bla = new Individual(individual.getStringData(idField), pos.getLon(), pos.getLat(), individual.getFloatData(inputField));
-			this.population.addIndividual(bla);
+			addOtpsIndividual(basicPop, individual, labelField, inputField);
 		}
-		this.results = new double[this.population.size()];
+		double[] results = new double[basicPop.size()];
+		this.resultSet = new ResultSet(basicPop, results);
 	}
 	
-	public OtpsResultSet(List<OtpsEvaluatedIndividual> evaluatedIndividuals, String inputField, String idField) {
-		super(new BasicPopulation(), new double[evaluatedIndividuals.size()]);
+	public OtpsResultSet(List<OtpsEvaluatedIndividual> evaluatedIndividuals, String labelField, String inputField) {
+		Population basicPop = new BasicPopulation();
+		double[] results = new double[evaluatedIndividuals.size()];
 		for(int i = 0; i < evaluatedIndividuals.size(); i++){
-			OtpsEvaluatedIndividual eval = evaluatedIndividuals.get(i);
-			OtpsIndividual individual = eval.getIndividual();
-			OtpsLatLon pos = individual.getLocation();
-			Individual bla = new Individual(individual.getStringData(idField), pos.getLon(), pos.getLat(), individual.getFloatData(inputField));
-			this.population.addIndividual(bla);
-			this.results[i] = eval.getTime();
+			OtpsEvaluatedIndividual evaluatedIndividual = evaluatedIndividuals.get(i);
+			OtpsIndividual individual = evaluatedIndividual.getIndividual();
+			addOtpsIndividual(basicPop, individual, labelField, inputField);
+			results[i] = evaluatedIndividual.getTime();
 		}
+		this.resultSet = new ResultSet(basicPop, results);
 	}
+	
+	public OtpsResultSet(List<OtpsEvaluatedIndividual> evaluatedIndividuals, String labelField) {
+		this(evaluatedIndividuals, labelField, null);
+	}		
 }
