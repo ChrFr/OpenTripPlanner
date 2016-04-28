@@ -48,8 +48,16 @@ public class OtpsAggregate {
 		}
 	}
 	
+	public OtpsAggregate(String mode, Integer value){
+		this(Mode.valueOf(mode), value);
+	}
+	
 	public OtpsAggregate(Mode mode){
 		this(mode, null);
+	}
+	
+	public OtpsAggregate(String mode){
+		this(Mode.valueOf(mode));
 	}
 	
 	public OtpsAggregate(Aggregator aggregator){
