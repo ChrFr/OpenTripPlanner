@@ -67,11 +67,13 @@ public class OtpsAggregate {
 	public double computeAggregate(OtpsResultSet resultSet){
 		if(aggregator == null)
 			throw new IllegalStateException();
+		if(resultSet.resultSet.population.size() == 0)
+			return 0;
 		return aggregator.computeAggregate(resultSet.resultSet);
 	}
 	
-	public double computeAggregate(List<OtpsEvaluatedIndividual> evaluatedIndividuals){
-		OtpsResultSet resultSet = new OtpsResultSet(evaluatedIndividuals, "");
+	public double computeAggregate(List<OtpsEvaluatedIndividual> evaluatedIndividuals, String fieldName){
+		OtpsResultSet resultSet = new OtpsResultSet(evaluatedIndividuals, "", fieldName);
 		return computeAggregate(resultSet);
 	}
 }

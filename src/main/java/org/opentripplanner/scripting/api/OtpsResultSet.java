@@ -48,7 +48,8 @@ public class OtpsResultSet{
 		for(OtpsIndividual individual: population){
 			addOtpsIndividual(basicPop, individual, labelField, inputField);
 		}
-		double[] results = new double[basicPop.size()];
+		double[] results = new double[basicPop.size()];		
+		basicPop.setup(); // doesn't do anything useful, but needed to init basicPop.skip[] with False
 		this.resultSet = new ResultSet(basicPop, results);
 	}
 	
@@ -61,6 +62,7 @@ public class OtpsResultSet{
 			addOtpsIndividual(basicPop, individual, labelField, inputField);
 			results[i] = evaluatedIndividual.getTime();
 		}
+		basicPop.setup(); // doesn't do anything useful, but needed to init basicPop.skip[] with False
 		this.resultSet = new ResultSet(basicPop, results);
 	}
 	
