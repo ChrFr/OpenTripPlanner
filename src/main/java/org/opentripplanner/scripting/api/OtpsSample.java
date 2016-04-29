@@ -1,7 +1,6 @@
 package org.opentripplanner.scripting.api;
 
 import java.util.Date;
-import java.util.concurrent.Callable;
 
 import org.opentripplanner.analyst.core.Sample;
 import org.opentripplanner.routing.core.State;
@@ -21,7 +20,7 @@ public class OtpsSample extends Sample {
 	
 	private interface Evaluation{
 		long evaluate(final Vertex v, final ShortestPathTree spt);
-	}
+	}	
 	
 	private Long evaluate(final ShortestPathTree spt, Evaluation ev){
 
@@ -45,6 +44,10 @@ public class OtpsSample extends Sample {
     }    
 
     private static long arrivalTime(final Vertex v, final ShortestPathTree spt){
+    	if(spt.options.arriveBy){
+    		GraphPath path = spt.getPath(v, true);
+    		return path.getEndTime();
+    	}
     	State s = spt.getState(v);
         return s.getTimeSeconds(); 
     }
