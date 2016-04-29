@@ -13,6 +13,8 @@
 
 package org.opentripplanner.scripting.api;
 
+import java.util.Date;
+
 import org.opentripplanner.analyst.core.Sample;
 import org.opentripplanner.analyst.request.SampleFactory;
 import org.opentripplanner.routing.graph.Edge;
@@ -148,7 +150,12 @@ public class OtpsIndividual {
             return null;
         int boardings = cachedSample.evalBoardings(spt);
         double walkDistance = cachedSample.evalWalkDistance(spt);
-        return new OtpsEvaluatedIndividual(this, time, boardings, walkDistance);
+        
+        OtpsSample sample = new OtpsSample(cachedSample);
+        Date startTime = sample.evalStartTime(spt);
+        Date arrivalTime = sample.evalArrivalTime(spt);
+        
+        return new OtpsEvaluatedIndividual(this, time, boardings, walkDistance, startTime, arrivalTime);
     }
 
     @Override

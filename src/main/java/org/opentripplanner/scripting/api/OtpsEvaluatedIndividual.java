@@ -13,6 +13,8 @@
 
 package org.opentripplanner.scripting.api;
 
+import java.util.Date;
+
 /**
  * This class encapsulate both an individual and evaluated values (time...).
  * 
@@ -31,13 +33,19 @@ public class OtpsEvaluatedIndividual {
     private int boardings;
 
     private double walkDistance;
+    
+    private Date startTime;
+    
+    private Date arrivalTime;
 
-    protected OtpsEvaluatedIndividual(OtpsIndividual individual, long time, int boardings,
-            double walkDistance) {
+	protected OtpsEvaluatedIndividual(OtpsIndividual individual, long time, int boardings,
+            double walkDistance, Date startTime, Date arrivalTime) {
         this.individual = individual;
         this.time = time;
         this.boardings = boardings;
         this.walkDistance = walkDistance;
+        this.startTime = startTime;
+        this.arrivalTime = arrivalTime;
     }
 
     /**
@@ -77,6 +85,14 @@ public class OtpsEvaluatedIndividual {
     public OtpsIndividual getIndividual() {
         return individual;
     }
+
+    public Date getStartTime() {
+		return startTime;
+	}
+
+	public Date getArrivalTime() {
+		return arrivalTime;
+	}
 
     @Override
     public String toString() {
