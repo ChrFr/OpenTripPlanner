@@ -22,7 +22,7 @@ import java.util.Date;
  * 
  * @see OtpsSPT.eval()
  * 
- * @author laurent
+ * @author laurent, Christoph Franke
  */
 public class OtpsEvaluatedIndividual {
 
@@ -86,10 +86,18 @@ public class OtpsEvaluatedIndividual {
         return individual;
     }
 
+    /**
+     * @return The actual time, the trip to this point started
+	 *
+     */
     public Date getStartTime() {
 		return startTime;
 	}
 
+    /**
+     * @return The actual time, this point was visited
+	 *
+     */
 	public Date getArrivalTime() {
 		return arrivalTime;
 	}

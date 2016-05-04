@@ -29,7 +29,7 @@ import com.vividsolutions.jts.linearref.LengthIndexedLine;
  * An individual is a point with coordinates, associated with some optional values (string, floats,
  * integers...)
  * 
- * @author laurent
+ * @author laurent, Christoph Franke
  */
 public class OtpsIndividual {
 
