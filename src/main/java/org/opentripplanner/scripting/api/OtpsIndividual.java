@@ -148,10 +148,11 @@ public class OtpsIndividual {
         long time = cachedSample.eval(spt);
         if (time == Long.MAX_VALUE)
             return null;
-        int boardings = cachedSample.evalBoardings(spt);
-        double walkDistance = cachedSample.evalWalkDistance(spt);
         
         OtpsSample sample = new OtpsSample(cachedSample);
+        
+        int boardings = sample.evalBoardings(spt);
+        double walkDistance = sample.evalWalkDistance(spt);        
         Date startTime = sample.evalStartTime(spt);
         Date arrivalTime = sample.evalArrivalTime(spt);
         

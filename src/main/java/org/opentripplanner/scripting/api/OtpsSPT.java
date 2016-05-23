@@ -80,6 +80,22 @@ public class OtpsSPT {
         }
         return retval;
     }
+    
+    public OtpsResultSet getResultSet(Iterable<OtpsIndividual> population, String inputField) {
+        List<OtpsEvaluatedIndividual> retval = new ArrayList<>();
+        for (OtpsIndividual individual : population) {
+            OtpsEvaluatedIndividual evaluated = eval(individual);
+            // ResultSets need information about every individual
+            if (evaluated == null)
+            	evaluated = new OtpsEvaluatedIndividual(individual, Long.MAX_VALUE, 255, Double.MAX_VALUE, null, null);
+            retval.add(evaluated);            
+        }
+        return new OtpsResultSet(retval, inputField);
+    }
+    
+    public OtpsResultSet getResultSet(Iterable<OtpsIndividual> population) {
+        return getResultSet(population, "");
+    }
 
     /**
      * Get the exact location of the origin of the search (from or to place, depending on the
