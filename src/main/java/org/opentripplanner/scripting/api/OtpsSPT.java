@@ -81,6 +81,13 @@ public class OtpsSPT {
         return retval;
     }
     
+    /**
+     * Evaluate the SPT for a whole population.
+     * 
+     * @param population
+     * @param inputField field, that will be used for aggregation
+     * @return an OtpsResultSet containing the evaluated results, can be used for aggregations and accumulations
+     */
     public OtpsResultSet getResultSet(Iterable<OtpsIndividual> population, String inputField) {
         List<OtpsEvaluatedIndividual> retval = new ArrayList<>();
         for (OtpsIndividual individual : population) {

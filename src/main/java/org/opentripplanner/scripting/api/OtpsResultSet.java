@@ -21,8 +21,6 @@ import java.util.List;
 
 import org.opentripplanner.analyst.batch.BasicPopulation;
 import org.opentripplanner.analyst.batch.ResultSet;
-import org.opentripplanner.analyst.batch.aggregator.Aggregator;
-import org.opentripplanner.routing.spt.ShortestPathTree;
 
 /**
  * A set of results, used for wrapping results for aggregations/accumulations
@@ -71,6 +69,8 @@ public class OtpsResultSet{
 					results[i] = evaluatedIndividual.getTime() ;
 				boardings[i] = evaluatedIndividual.getBoardings();
 				walkDistances[i] = evaluatedIndividual.getWalkDistance();
+				startTimes[i] = evaluatedIndividual.getStartTime();
+				arrivalTimes[i] = evaluatedIndividual.getArrivalTime();
 			}
 			basicPop.addIndividual(ind);
 		}

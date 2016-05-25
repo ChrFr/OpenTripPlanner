@@ -16,7 +16,6 @@ package org.opentripplanner.scripting.api;
 import org.opentripplanner.analyst.batch.Accumulator;
 import org.opentripplanner.analyst.batch.DecayAccumulator;
 import org.opentripplanner.analyst.batch.ThresholdAccumulator;
-import org.opentripplanner.analyst.batch.aggregator.ThresholdSumAggregator;
 
 /**
  * class for accumulating resultSets
