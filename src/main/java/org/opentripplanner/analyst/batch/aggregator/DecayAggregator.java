@@ -17,18 +17,17 @@ import org.opentripplanner.analyst.batch.Individual;
 import org.opentripplanner.analyst.batch.ResultSet;
 
 /**
- * An aggregator that approximates the integral of a cumulative opportunity curve up to a certain threshold distance from the origin. This is vaguely
- * inspired by the Lorenz curve and the Gini coefficient, and is intended to be a measure of urban centrality. Opportunities that are closer to the
- * search origin will be weighted much more heavily than those nearer to the threshold.
  * 
- * @author andrewbyrd
+ * 
+ * @author Christoph Franke
  */
 public class DecayAggregator implements Aggregator {
 
-    int thresholdSeconds = 60 * 60;
+    private int thresholdSeconds = 60 * 60;
     private double lambda; 
 
-    public DecayAggregator(double lambda) {
+    public DecayAggregator(int thresholdSeconds, double lambda) {
+    	this.thresholdSeconds = thresholdSeconds;
     	this.lambda = lambda;
     }
 

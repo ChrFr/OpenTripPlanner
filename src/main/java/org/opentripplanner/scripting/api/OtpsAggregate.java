@@ -28,10 +28,12 @@ public class OtpsAggregate {
 	
 	private Aggregator aggregator;
 	
-	protected OtpsAggregate(OtpsResultSet.AggregationMode mode, Double value){
+	protected OtpsAggregate(OtpsResultSet.AggregationMode mode, Double[] params){
 		switch(mode){
 			case THRESHOLD_SUM_AGGREGATOR:
 				aggregator = new ThresholdSumAggregator();
+				if(params != null && params.length > 0)
+					((ThresholdSumAggregator)aggregator).threshold = params[0].intValue();
 				break;
 
 			case WEIGHTED_AVERAGE_AGGREGATOR:
@@ -39,15 +41,15 @@ public class OtpsAggregate {
 				break;
 				
 			case THRESHOLD_CUMMULATIVE_AGGREGATOR:
-				if(value == null)
-					throw new IllegalArgumentException("mode " + OtpsResultSet.AggregationMode.THRESHOLD_CUMMULATIVE_AGGREGATOR + " needs a threshold to be set");
-				aggregator = new ThresholdCumulativeAggregator(value.intValue());
+				if(params == null || params.length == 0)
+					throw new IllegalArgumentException("mode THRESHOLD_CUMMULATIVE_AGGREGATOR needs a threshold as a parameter");
+				aggregator = new ThresholdCumulativeAggregator(params[0].intValue());
 				break;
 				
 			case DECAY_AGGREGATOR:
-				if(value == null)
-					throw new IllegalArgumentException("mode " + OtpsResultSet.AggregationMode.DECAY_AGGREGATOR + " needs a lambda to be set");
-				aggregator = new DecayAggregator(value);
+				if(params == null || params.length < 2)
+					throw new IllegalArgumentException("mode DECAY_AGGREGATOR needs a threshold and a lambda as parameters");
+				aggregator = new DecayAggregator(params[0].intValue(), params[1]);
 				break;
 		}
 	}
@@ -67,9 +69,4 @@ public class OtpsAggregate {
 			return 0;
 		return aggregator.computeAggregate(resultSet.resultSet);
 	}
-	/*
-	public double computeAggregate(List<OtpsEvaluatedIndividual> evaluatedIndividuals, String fieldName){
-		OtpsResultSet resultSet = new OtpsResultSet(evaluatedIndividuals, fieldName);
-		return computeAggregate(resultSet);
-	}*/
 }

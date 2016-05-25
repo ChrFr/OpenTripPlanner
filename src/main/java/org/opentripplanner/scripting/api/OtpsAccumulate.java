@@ -13,11 +13,10 @@
 
 package org.opentripplanner.scripting.api;
 
-import java.util.List;
-
 import org.opentripplanner.analyst.batch.Accumulator;
 import org.opentripplanner.analyst.batch.DecayAccumulator;
 import org.opentripplanner.analyst.batch.ThresholdAccumulator;
+import org.opentripplanner.analyst.batch.aggregator.ThresholdSumAggregator;
 
 /**
  * class for accumulating resultSets
@@ -25,45 +24,31 @@ import org.opentripplanner.analyst.batch.ThresholdAccumulator;
  * @author Christoph Franke
  */
 public class OtpsAccumulate {
-	public static enum Mode { DECAY_ACCUMULATOR, THRESHOLD_ACCUMULATOR }
 	
 	private Accumulator accumulator;
 	
-	public OtpsAccumulate(Mode mode, Integer value){
+	public OtpsAccumulate(OtpsResultSet.AccumulationMode mode, Double[] params){
 		switch(mode){
 			case DECAY_ACCUMULATOR:
-				if(value == null)
-					throw new IllegalArgumentException("mode " + Mode.THRESHOLD_ACCUMULATOR + " needs a value to be set");
+				if(params == null || params.length < 2)
+					throw new IllegalArgumentException("mode DECAY_ACCUMULATOR needs halflifeminutes and a lambda as parameters");
 				accumulator = new DecayAccumulator();
-				((DecayAccumulator)accumulator).setHalfLifeMinutes(value);
+				((DecayAccumulator)accumulator).setHalfLifeMinutes(params[0].intValue());
+				((DecayAccumulator)accumulator).lambda = params[1].intValue();
 				break;
 				
 			case THRESHOLD_ACCUMULATOR:
 				accumulator = new ThresholdAccumulator();
+				if(params != null && params.length > 0)
+					((ThresholdAccumulator)accumulator).thresholdSeconds = params[0].intValue();
 				break;
 		}
 	}
 	
-	public OtpsAccumulate(String mode, Integer value){
-		this(Mode.valueOf(mode), value);
-	}
-	
-	public OtpsAccumulate(Mode mode){
-		this(mode, null);
-	}
-	
-	public OtpsAccumulate(String mode){
-		this(Mode.valueOf(mode));
-	}
-	
-	private OtpsAccumulate(Accumulator accumulator){
-		this.accumulator = accumulator;
-	}
-	
-	public void computeAccumulate(OtpsResultSet current, OtpsResultSet accumulated, int value){
+	public void computeAccumulate(OtpsResultSet current, OtpsResultSet accumulated, double amount){
 		if(accumulator == null)
 			throw new IllegalStateException();
 		if(current.resultSet.population.size() != 0)
-			accumulator.accumulate(value, current.resultSet, accumulated.resultSet);
+			accumulator.accumulate(amount, current.resultSet, accumulated.resultSet);
 	}
 }

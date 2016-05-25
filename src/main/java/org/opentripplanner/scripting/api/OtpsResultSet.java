@@ -32,6 +32,7 @@ import org.opentripplanner.routing.spt.ShortestPathTree;
 public class OtpsResultSet{	
 
 	public static enum AggregationMode { THRESHOLD_SUM_AGGREGATOR, WEIGHTED_AVERAGE_AGGREGATOR, THRESHOLD_CUMMULATIVE_AGGREGATOR, DECAY_AGGREGATOR }
+	public static enum AccumulationMode { DECAY_ACCUMULATOR, THRESHOLD_ACCUMULATOR }
 	
 	protected ResultSet resultSet;
 	private List<OtpsEvaluatedIndividual> evaluatedIndividuals;
@@ -40,6 +41,7 @@ public class OtpsResultSet{
 	private Integer[] boardings;
 	private Double[] walkDistances;
 	private AggregationMode aggregationMode = AggregationMode.THRESHOLD_SUM_AGGREGATOR;
+	private AccumulationMode accumulationMode = AccumulationMode.THRESHOLD_ACCUMULATOR;
 	
 	protected OtpsResultSet(List<OtpsEvaluatedIndividual> evaluatedIndividuals, String inputField) {
 		this.evaluatedIndividuals = evaluatedIndividuals;
@@ -87,8 +89,8 @@ public class OtpsResultSet{
 		}		
 	}
 	
-	public double aggregate(Double value){
-        OtpsAggregate aggregator = new OtpsAggregate(aggregationMode, value);           
+	public double aggregate(Double[] params){
+        OtpsAggregate aggregator = new OtpsAggregate(aggregationMode, params);           
         return aggregator.computeAggregate(this);  
 	}
 	
@@ -106,6 +108,27 @@ public class OtpsResultSet{
 
 	public void setAggregationMode(int mode){
 		setAggregationMode(AggregationMode.values()[mode]);
+	}
+	
+	public void accumulate(OtpsResultSet accumulated, double amount, Double[] params){
+		OtpsAccumulate accumulator = new OtpsAccumulate(accumulationMode, params);           
+        accumulator.computeAccumulate(this, accumulated, amount);
+	}
+	
+	public double accumulate(OtpsResultSet accumulated, double amount){     
+        return accumulate(accumulated, amount);  
+	}
+	
+	public void setAccumulationMode(AccumulationMode mode){
+		accumulationMode = mode;
+	}
+	
+	public void setAccumulationnMode(String mode){
+		setAccumulationMode(AccumulationMode.valueOf(mode));
+	}
+
+	public void setAccumulationnMode(int mode){
+		setAccumulationMode(AccumulationMode.values()[mode]);
 	}
 	
     /**
