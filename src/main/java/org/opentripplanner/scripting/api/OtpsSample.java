@@ -55,7 +55,7 @@ public class OtpsSample extends Sample {
 
 		long value0 = Long.MAX_VALUE;
 		long value1 = Long.MAX_VALUE;
-		if ( s0 != null) value0 = ev.evaluate(v0, spt);
+		if ( s0 != null) value0 = ev.evaluate(v0, spt); // TODO: add d0, d1
 		if ( s1 != null) value1 = ev.evaluate(v1, spt); 
 		
 		return (value0 < value1) ? value0 : value1;
@@ -73,6 +73,19 @@ public class OtpsSample extends Sample {
     	}
     	State s = spt.getState(v);
         return s.getTimeSeconds(); 
+    }
+
+    // there is a bug in Sample.evalWalkDistance: comparisons with Double.NaN can never be true (so always m1 is taken, even if NaN)
+    public double evalWalkDistance(ShortestPathTree spt) {
+        State s0 = spt.getState(v0);
+        State s1 = spt.getState(v1);
+        double m0 = Double.MAX_VALUE;
+        double m1 = Double.MAX_VALUE;
+        if (s0 != null)
+            m0 = (s0.getWalkDistance() + d0);
+        if (s1 != null)
+            m1 = (s1.getWalkDistance() + d1);
+        return (m0 < m1) ? m0 : m1;
     }
     
 //    public String evalTrips(final ShortestPathTree spt){

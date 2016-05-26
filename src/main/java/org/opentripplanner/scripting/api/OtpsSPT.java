@@ -86,7 +86,7 @@ public class OtpsSPT {
      * 
      * @param population
      * @param inputField field, that will be used for aggregation
-     * @return an OtpsResultSet containing the evaluated results, can be used for aggregations and accumulations
+     * @return an OtpsResultSet containing the evaluated results, may be used for aggregations and accumulations
      */
     public OtpsResultSet getResultSet(Iterable<OtpsIndividual> population, String inputField) {
         List<OtpsEvaluatedIndividual> retval = new ArrayList<>();
