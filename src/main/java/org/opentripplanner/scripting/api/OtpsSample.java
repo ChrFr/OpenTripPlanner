@@ -37,7 +37,7 @@ public class OtpsSample extends Sample {
 	}
 	
 	private interface Evaluation{
-		long evaluate(final Vertex v, final ShortestPathTree spt);
+		long evaluate(final Vertex v, final int d, final ShortestPathTree spt);
 	}	
 
     /**
@@ -55,28 +55,32 @@ public class OtpsSample extends Sample {
 
 		long value0 = Long.MAX_VALUE;
 		long value1 = Long.MAX_VALUE;
-		if ( s0 != null) value0 = ev.evaluate(v0, spt); // TODO: add d0, d1
-		if ( s1 != null) value1 = ev.evaluate(v1, spt); 
+		if ( s0 != null) value0 = ev.evaluate(v0, d0, spt);
+		if ( s1 != null) value1 = ev.evaluate(v1, d1, spt); 
 		
 		return (value0 < value1) ? value0 : value1;
 	}	
 
-    private static long startTime(final Vertex v, final ShortestPathTree spt){
+    private static long startTime(final Vertex v, final int d, final ShortestPathTree spt){
+    	if(spt.options.arriveBy){
+    		State s = spt.getState(v);
+            return s.getTimeSeconds() - (long)(d / spt.getOptions().walkSpeed); 
+    	}
     	GraphPath path = spt.getPath(v, true);
     	return path.getStartTime();
     }        
 
-    private static long arrivalTime(final Vertex v, final ShortestPathTree spt){
+    private static long arrivalTime(final Vertex v, final int d, final ShortestPathTree spt){
     	if(spt.options.arriveBy){
     		GraphPath path = spt.getPath(v, true);
     		return path.getEndTime();
     	}
     	State s = spt.getState(v);
-        return s.getTimeSeconds(); 
+        return s.getTimeSeconds() + (long)(d / spt.getOptions().walkSpeed); 
     }
 
     // there is a bug in Sample.evalWalkDistance: comparisons with Double.NaN can never be true (so always m1 is taken, even if NaN)
-    public double evalWalkDistance(ShortestPathTree spt) {
+    public double evalWalkDistance(final ShortestPathTree spt) {
         State s0 = spt.getState(v0);
         State s1 = spt.getState(v1);
         double m0 = Double.MAX_VALUE;
@@ -111,8 +115,9 @@ public class OtpsSample extends Sample {
      * @param spt the ShortestPathTree with respect to which this sample will be evaluated
      * @return the start time of the trip to reach this Sample point from the SPT's origin
      */
-    public Date evalStartTime(final ShortestPathTree spt){    	
-		Long value = evaluate(spt, (v, s) -> startTime(v,s));
+    public Date evalStartTime(final ShortestPathTree spt){    
+    	double distanceFactor = spt.options.arriveBy? 1. / spt.getOptions().walkSpeed: 0;
+		Long value = evaluate(spt, (v, d, s) -> startTime(v, d, s));
 		return new Date((long)value * 1000);
     }
 
@@ -121,7 +126,8 @@ public class OtpsSample extends Sample {
      * @return the arrival time of the trip to reach this Sample point from the SPT's origin
      */
     public Date evalArrivalTime(final ShortestPathTree spt){
-		Long value = evaluate(spt, (v, s) -> arrivalTime(v,s));
+    	double distanceFactor = spt.options.arriveBy? -1. / spt.getOptions().walkSpeed: 1. / spt.getOptions().walkSpeed;
+		Long value = evaluate(spt, (v, d, s) -> arrivalTime(v, d, s));
 		return new Date((long)value * 1000);
     }
 }
