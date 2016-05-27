@@ -38,7 +38,7 @@ public class DecayAggregator implements Aggregator {
         for (Individual indiv : rs.population) {
             double t = rs.results[i];
             if (t > 0 && t < thresholdSeconds){
-            	double decay = Math.exp(-lambda * t);
+            	double decay = Math.exp(lambda * (t / 60));
                 double decayed = indiv.input * decay;
                 aggregate += decayed;
             }
