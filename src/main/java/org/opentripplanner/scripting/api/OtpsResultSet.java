@@ -40,6 +40,7 @@ public class OtpsResultSet{
 	private Double[] walkDistances;
 	private AggregationMode aggregationMode = AggregationMode.THRESHOLD_SUM_AGGREGATOR;
 	private AccumulationMode accumulationMode = AccumulationMode.THRESHOLD_ACCUMULATOR;
+	private OtpsIndividual source;
 	
 	protected OtpsResultSet(List<OtpsEvaluatedIndividual> evaluatedIndividuals, String inputField) {
 		this.evaluatedIndividuals = evaluatedIndividuals;
@@ -77,7 +78,15 @@ public class OtpsResultSet{
 		basicPop.setup(); // doesn't do anything useful, but needed to init basicPop.skip[] with False
 		this.resultSet = new ResultSet(basicPop, results);
 	}
-	
+
+	public OtpsIndividual getSource() {
+		return source;
+	}
+
+	public void setSource(OtpsIndividual source) {
+		this.source = source;
+	}
+
 	public void setInput(String inputField){
 		int i = 0;
 		for(Individual individual: resultSet.population){
