@@ -16,6 +16,7 @@ package org.opentripplanner.scripting.api;
 import org.opentripplanner.analyst.batch.Individual;
 import org.opentripplanner.analyst.batch.Population;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -33,7 +34,7 @@ public class OtpsResultSet{
 	public static enum AccumulationMode { DECAY_ACCUMULATOR, THRESHOLD_ACCUMULATOR }
 	
 	protected ResultSet resultSet;
-	private List<OtpsEvaluatedIndividual> evaluatedIndividuals;
+	protected List<OtpsEvaluatedIndividual> evaluatedIndividuals;
 	private Date[] startTimes;
 	private Date[] arrivalTimes;
 	private Integer[] boardings;
@@ -41,9 +42,11 @@ public class OtpsResultSet{
 	private AggregationMode aggregationMode = AggregationMode.THRESHOLD_SUM_AGGREGATOR;
 	private AccumulationMode accumulationMode = AccumulationMode.THRESHOLD_ACCUMULATOR;
 	private OtpsIndividual source;
+	private String inputField;
 	
 	protected OtpsResultSet(List<OtpsEvaluatedIndividual> evaluatedIndividuals, String inputField) {
 		this.evaluatedIndividuals = evaluatedIndividuals;
+		this.inputField = inputField;
 		Population basicPop = new BasicPopulation();
 		double[] results = new double[evaluatedIndividuals.size()];
 		startTimes = new Date[evaluatedIndividuals.size()];
@@ -105,6 +108,33 @@ public class OtpsResultSet{
 	
 	public double aggregate(){     
         return aggregate(null);  
+	}
+
+    /**
+     * merge this set with the given one, keeping the shortest trips (with smallest times)
+     * both sets have to be of the same length 
+     * 
+     * @return merged set of results
+	 *
+     */	
+	public OtpsResultSet merge(OtpsResultSet setToMerge){
+		if (setToMerge.length() != length())
+			throw new IllegalArgumentException("The length of the set to merge differs from the length of this set.");
+		
+		double[] times = getTimes();
+		double[] timesToMerge = setToMerge.getTimes();
+		OtpsEvaluatedIndividual bestIndividual;
+		List<OtpsEvaluatedIndividual> evaluatedIndividuals = new ArrayList<>();
+		for(int i = 0; i < length(); i++){			
+			if (timesToMerge[i] < times[i])
+				bestIndividual = setToMerge.evaluatedIndividuals.get(i);
+			else
+				bestIndividual = this.evaluatedIndividuals.get(i);
+			evaluatedIndividuals.add(bestIndividual);			
+		}
+		OtpsResultSet mergedResultSet = new OtpsResultSet(evaluatedIndividuals, inputField);
+		mergedResultSet.setSource(source);
+		return mergedResultSet;
 	}
 	
 	public void setAggregationMode(AggregationMode mode){
@@ -178,5 +208,9 @@ public class OtpsResultSet{
 		for(int i = 0; i < evaluatedIndividuals.size(); i++)
 			data[i] = evaluatedIndividuals.get(i).getIndividual().getStringData(dataName);
 		return data;
+	}
+	
+	public int length(){
+		return resultSet.results.length;
 	}
 }
