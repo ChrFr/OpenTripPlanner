@@ -149,24 +149,25 @@ public class OtpsResultSet{
 		setAggregationMode(AggregationMode.values()[mode]);
 	}
 	
-	public void accumulate(OtpsResultSet accumulated, double amount, Double[] params){
+	public void accumulate(OtpsResultSet accumulated, Double[] params){ 
+		double amount = source.getFloatData(inputField);
 		OtpsAccumulate accumulator = new OtpsAccumulate(accumulationMode, params);           
         accumulator.computeAccumulate(this, accumulated, amount);
 	}
 	
-	public double accumulate(OtpsResultSet accumulated, double amount){     
-        return accumulate(accumulated, amount);  
+	public void accumulate(OtpsResultSet accumulated){    
+        accumulate(accumulated, null);  
 	}
 	
 	public void setAccumulationMode(AccumulationMode mode){
 		accumulationMode = mode;
 	}
 	
-	public void setAccumulationnMode(String mode){
+	public void setAccumulationMode(String mode){
 		setAccumulationMode(AccumulationMode.valueOf(mode));
 	}
 
-	public void setAccumulationnMode(int mode){
+	public void setAccumulationMode(int mode){
 		setAccumulationMode(AccumulationMode.values()[mode]);
 	}
 	
