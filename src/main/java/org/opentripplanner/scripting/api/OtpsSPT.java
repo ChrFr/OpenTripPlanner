@@ -88,7 +88,7 @@ public class OtpsSPT {
      * @param inputField field, that will be used for aggregation
      * @return an OtpsResultSet containing the evaluated results, may be used for aggregations and accumulations
      */
-    public OtpsResultSet getResultSet(Iterable<OtpsIndividual> population, String inputField) {
+    public OtpsResultSet getResultSet(Iterable<OtpsIndividual> population) {
         List<OtpsEvaluatedIndividual> retval = new ArrayList<>();
         for (OtpsIndividual individual : population) {
             OtpsEvaluatedIndividual evaluated = eval(individual);
@@ -97,11 +97,7 @@ public class OtpsSPT {
             	evaluated = new OtpsEvaluatedIndividual(individual, Long.MAX_VALUE, 255, Double.MAX_VALUE, null, null);
             retval.add(evaluated);            
         }
-        return new OtpsResultSet(retval, inputField);
-    }
-    
-    public OtpsResultSet getResultSet(Iterable<OtpsIndividual> population) {
-        return getResultSet(population, "");
+        return new OtpsResultSet(retval);
     }
 
     /**

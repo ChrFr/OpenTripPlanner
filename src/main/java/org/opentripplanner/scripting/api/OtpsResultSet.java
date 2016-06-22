@@ -44,9 +44,8 @@ public class OtpsResultSet{
 	private OtpsIndividual source;
 	private String inputField;
 	
-	protected OtpsResultSet(List<OtpsEvaluatedIndividual> evaluatedIndividuals, String inputField) {
+	protected OtpsResultSet(List<OtpsEvaluatedIndividual> evaluatedIndividuals) {
 		this.evaluatedIndividuals = evaluatedIndividuals;
-		this.inputField = inputField;
 		Population basicPop = new BasicPopulation();
 		double[] results = new double[evaluatedIndividuals.size()];
 		startTimes = new Date[evaluatedIndividuals.size()];
@@ -62,12 +61,7 @@ public class OtpsResultSet{
 			if (evaluatedIndividual != null){				
 				OtpsIndividual individual = evaluatedIndividual.getIndividual();
 				OtpsLatLon pos = individual.getLocation();	
-				
-				Double input = (inputField != null && inputField.length() > 0)? individual.getFloatData(inputField): new Double(0);	
-				if (input == null)
-					throw new IllegalArgumentException("Field " + inputField + " not found");
-							
-				ind = new Individual("", pos.getLon(), pos.getLat(), input);
+				ind = new Individual("", pos.getLon(), pos.getLat(), 0);
 				Long time = evaluatedIndividual.getTime();
 				if (time != null)
 					results[i] = evaluatedIndividual.getTime() ;
@@ -90,7 +84,7 @@ public class OtpsResultSet{
 		this.source = source;
 	}
 
-	public void setInput(String inputField){
+	private void setInput(String inputField){
 		int i = 0;
 		for(Individual individual: resultSet.population){
 
@@ -101,13 +95,14 @@ public class OtpsResultSet{
 		}		
 	}
 	
-	public double aggregate(Double[] params){
+	public double aggregate(String inputField, Double[] params){
+		setInput(inputField);
         OtpsAggregate aggregator = new OtpsAggregate(aggregationMode, params);           
         return aggregator.computeAggregate(this);  
 	}
 	
-	public double aggregate(){     
-        return aggregate(null);  
+	public double aggregate(String inputField){     
+        return aggregate(inputField, null);  
 	}
 
     /**
@@ -132,7 +127,7 @@ public class OtpsResultSet{
 				bestIndividual = this.evaluatedIndividuals.get(i);
 			evaluatedIndividuals.add(bestIndividual);			
 		}
-		OtpsResultSet mergedResultSet = new OtpsResultSet(evaluatedIndividuals, inputField);
+		OtpsResultSet mergedResultSet = new OtpsResultSet(evaluatedIndividuals);
 		mergedResultSet.setSource(source);
 		return mergedResultSet;
 	}
@@ -149,14 +144,14 @@ public class OtpsResultSet{
 		setAggregationMode(AggregationMode.values()[mode]);
 	}
 	
-	public void accumulate(OtpsResultSet accumulated, Double[] params){ 
+	public void accumulate(OtpsResultSet accumulated, String inputField, Double[] params){ 
 		double amount = source.getFloatData(inputField);
 		OtpsAccumulate accumulator = new OtpsAccumulate(accumulationMode, params);           
         accumulator.computeAccumulate(this, accumulated, amount);
 	}
 	
-	public void accumulate(OtpsResultSet accumulated){    
-        accumulate(accumulated, null);  
+	public void accumulate(OtpsResultSet accumulated, String inputField){    
+        accumulate(accumulated, inputField, null);  
 	}
 	
 	public void setAccumulationMode(AccumulationMode mode){
