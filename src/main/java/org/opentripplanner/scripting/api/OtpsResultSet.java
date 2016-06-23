@@ -35,45 +35,53 @@ public class OtpsResultSet{
 	
 	protected ResultSet resultSet;
 	protected List<OtpsEvaluatedIndividual> evaluatedIndividuals;
-	private Date[] startTimes;
-	private Date[] arrivalTimes;
-	private Integer[] boardings;
-	private Double[] walkDistances;
 	private AggregationMode aggregationMode = AggregationMode.THRESHOLD_SUM_AGGREGATOR;
 	private AccumulationMode accumulationMode = AccumulationMode.THRESHOLD_ACCUMULATOR;
 	private OtpsIndividual source;
-	private String inputField;
+
+    /**
+     * @return most likely the travel times, respectively accumulated values
+	 *
+     */
+	protected OtpsResultSet(){
+		this.evaluatedIndividuals = new ArrayList<>();
+	}
 	
-	protected OtpsResultSet(List<OtpsEvaluatedIndividual> evaluatedIndividuals) {
-		this.evaluatedIndividuals = evaluatedIndividuals;
+	private static ResultSet createBasicResultSet(List<OtpsIndividual> individuals, double[] results){
 		Population basicPop = new BasicPopulation();
-		double[] results = new double[evaluatedIndividuals.size()];
-		startTimes = new Date[evaluatedIndividuals.size()];
-		arrivalTimes = new Date[evaluatedIndividuals.size()];
-		boardings = new Integer[evaluatedIndividuals.size()];
-		walkDistances = new Double[evaluatedIndividuals.size()];
-		for(int i = 0; i < evaluatedIndividuals.size(); i++){			
-			OtpsEvaluatedIndividual evaluatedIndividual = evaluatedIndividuals.get(i);		
-			results[i] = Double.MAX_VALUE;	
-			startTimes[i] = null;	
-			arrivalTimes[i] = null;
-			Individual ind = null;
-			if (evaluatedIndividual != null){				
-				OtpsIndividual individual = evaluatedIndividual.getIndividual();
-				OtpsLatLon pos = individual.getLocation();	
-				ind = new Individual("", pos.getLon(), pos.getLat(), 0);
-				Long time = evaluatedIndividual.getTime();
-				if (time != null)
-					results[i] = evaluatedIndividual.getTime() ;
-				boardings[i] = evaluatedIndividual.getBoardings();
-				walkDistances[i] = evaluatedIndividual.getWalkDistance();
-				startTimes[i] = evaluatedIndividual.getStartTime();
-				arrivalTimes[i] = evaluatedIndividual.getArrivalTime();
-			}
+		for(OtpsIndividual individual: individuals){
+			OtpsLatLon pos = individual.getLocation();	
+			Individual ind = new Individual("", pos.getLon(), pos.getLat(), 0);
 			basicPop.addIndividual(ind);
 		}
-		basicPop.setup(); // doesn't do anything useful, but needed to init basicPop.skip[] with False
-		this.resultSet = new ResultSet(basicPop, results);
+		basicPop.setup(); // doesn't do anything useful, but needed to init basicPop.skip[] with False		
+		return new ResultSet(basicPop, results);
+	}
+	
+	protected void setResults(List<OtpsIndividual> individuals, double[] results){
+		if(individuals.size() != results.length)
+			throw new IllegalArgumentException("Results and individuals have to be of same length.");
+		this.resultSet = createBasicResultSet(individuals, results);
+		// reset evaluated ind. with default values
+		this.evaluatedIndividuals = new ArrayList<>();
+		for(OtpsIndividual individual: individuals)
+			evaluatedIndividuals.add(new OtpsEvaluatedIndividual(individual));		
+	}
+	
+	protected void setResults(List<OtpsEvaluatedIndividual> evaluatedIndividuals) {
+		this.evaluatedIndividuals = evaluatedIndividuals;
+		double[] results = new double[evaluatedIndividuals.size()];
+		List<OtpsIndividual> individuals = new ArrayList<>();
+		for(int i = 0; i < evaluatedIndividuals.size(); i++){			
+			OtpsEvaluatedIndividual evaluatedIndividual = evaluatedIndividuals.get(i);		
+			results[i] = Double.MAX_VALUE;				
+			OtpsIndividual individual = evaluatedIndividual.getIndividual();
+			individuals.add(individual);
+			Long time = evaluatedIndividual.getTime();
+			if (time != null)
+				results[i] = time;
+		}
+		this.resultSet = createBasicResultSet(individuals, results);
 	}
 
 	public OtpsIndividual getSource() {
@@ -116,18 +124,19 @@ public class OtpsResultSet{
 		if (setToMerge.length() != length())
 			throw new IllegalArgumentException("The length of the set to merge differs from the length of this set.");
 		
-		double[] times = getTimes();
-		double[] timesToMerge = setToMerge.getTimes();
+		Long[] times = getTimes();
+		Long[] timesToMerge = setToMerge.getTimes();
 		OtpsEvaluatedIndividual bestIndividual;
 		List<OtpsEvaluatedIndividual> evaluatedIndividuals = new ArrayList<>();
 		for(int i = 0; i < length(); i++){			
-			if (timesToMerge[i] < times[i])
+			if ((times[i] == null && timesToMerge[i] != null) || timesToMerge[i] < times[i])
 				bestIndividual = setToMerge.evaluatedIndividuals.get(i);
 			else
 				bestIndividual = this.evaluatedIndividuals.get(i);
 			evaluatedIndividuals.add(bestIndividual);			
 		}
-		OtpsResultSet mergedResultSet = new OtpsResultSet(evaluatedIndividuals);
+		OtpsResultSet mergedResultSet = new OtpsResultSet();
+		mergedResultSet.setResults(evaluatedIndividuals);
 		mergedResultSet.setSource(source);
 		return mergedResultSet;
 	}
@@ -171,6 +180,9 @@ public class OtpsResultSet{
 	 *
      */
 	public Date[] getStartTimes() {
+		Date[] startTimes = new Date[length()];
+		for (int i = 0; i < length(); i++)
+			startTimes[i] = evaluatedIndividuals.get(i).getStartTime();
 		return startTimes;
 	}
 
@@ -179,23 +191,43 @@ public class OtpsResultSet{
 	 *
      */
 	public Date[] getArrivalTimes() {
+		Date[] arrivalTimes = new Date[length()];
+		for (int i = 0; i < length(); i++)
+			arrivalTimes[i] = evaluatedIndividuals.get(i).getArrivalTime();
 		return arrivalTimes;
 	}
 
-	public double[] getTimes(){
+    /**
+     * @return travel times in seconds
+	 *
+     */
+	public Long[] getTimes(){
+		Long[] times = new Long[length()];
+		for (int i = 0; i < length(); i++)
+			times[i] = evaluatedIndividuals.get(i).getTime();
+		return times;
+	}
+
+    /**
+     * @return most likely the travel times, respectively accumulated values
+	 *
+     */
+	public double[] getResults(){
 		return resultSet.results;
 	}
 	
 	public Integer[] getBoardings(){
+		Integer[] boardings = new Integer[length()];
+		for (int i = 0; i < length(); i++)
+			boardings[i] = evaluatedIndividuals.get(i).getBoardings();
 		return boardings;
 	}
 
 	public Double[] getWalkDistances(){
+		Double[] walkDistances = new Double[length()];
+		for (int i = 0; i < length(); i++)
+			walkDistances[i] = evaluatedIndividuals.get(i).getWalkDistance();
 		return walkDistances;
-	}
-	
-	public double[] getInputs(){
-		return null;//resultSet.population;
 	}
 	
 	public String[] getStringData(String dataName){
@@ -207,6 +239,6 @@ public class OtpsResultSet{
 	}
 	
 	public int length(){
-		return resultSet.results.length;
+		return evaluatedIndividuals.size();
 	}
 }

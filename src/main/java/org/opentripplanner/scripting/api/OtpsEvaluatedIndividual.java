@@ -47,6 +47,15 @@ public class OtpsEvaluatedIndividual {
         this.startTime = startTime;
         this.arrivalTime = arrivalTime;
     }
+	
+	protected OtpsEvaluatedIndividual(OtpsIndividual individual) {
+        this.individual = individual;
+        this.time = Long.MAX_VALUE;
+        this.boardings = 255;
+        this.walkDistance = Double.MAX_VALUE;
+        this.startTime = null;
+        this.arrivalTime = null;
+    }
 
     /**
      * @return The time, in seconds, for this evualuated individual. Return null/None if no time is

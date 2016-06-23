@@ -92,12 +92,15 @@ public class OtpsSPT {
         List<OtpsEvaluatedIndividual> retval = new ArrayList<>();
         for (OtpsIndividual individual : population) {
             OtpsEvaluatedIndividual evaluated = eval(individual);
-            // ResultSets need information about every individual
+            // ResultSet needs information about every individual (the unreachable ones too)
+            // but eval returns null if time is MaxValue
             if (evaluated == null)
-            	evaluated = new OtpsEvaluatedIndividual(individual, Long.MAX_VALUE, 255, Double.MAX_VALUE, null, null);
+            	evaluated = new OtpsEvaluatedIndividual(individual);
             retval.add(evaluated);            
         }
-        return new OtpsResultSet(retval);
+        OtpsResultSet resultSet = new OtpsResultSet();
+        resultSet.setResults(retval);
+        return resultSet;
     }
 
     /**
