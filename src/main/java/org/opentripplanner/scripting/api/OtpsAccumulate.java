@@ -46,8 +46,7 @@ public class OtpsAccumulate {
 	
 	public void computeAccumulate(OtpsResultSet current, OtpsResultSet accumulated, double amount){
 		if(accumulator == null)
-			throw new IllegalStateException();
-		if(current.resultSet.population.size() != 0)
-			accumulator.accumulate(amount, current.resultSet, accumulated.resultSet);
+			throw new IllegalStateException("Accumulation-mode has not been set.");
+		accumulator.accumulate(amount, current.resultSet, accumulated.resultSet);
 	}
 }
