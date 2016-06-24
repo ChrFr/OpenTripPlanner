@@ -62,8 +62,8 @@ public class Sample {
     public double evalWalkDistance(ShortestPathTree spt) {
         State s0 = spt.getState(v0);
         State s1 = spt.getState(v1);
-        double m0 = Double.NaN;
-        double m1 = Double.NaN;
+        double m0 = Double.MAX_VALUE;
+        double m1 = Double.MAX_VALUE;
         if (s0 != null)
             m0 = (s0.getWalkDistance() + d0);
         if (s1 != null)
