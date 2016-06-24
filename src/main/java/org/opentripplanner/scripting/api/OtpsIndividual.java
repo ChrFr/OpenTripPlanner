@@ -17,6 +17,7 @@ import java.util.Date;
 
 import org.opentripplanner.analyst.core.Sample;
 import org.opentripplanner.analyst.request.SampleFactory;
+import org.opentripplanner.api.model.Itinerary;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.spt.ShortestPathTree;
@@ -153,8 +154,11 @@ public class OtpsIndividual {
         
         int boardings = sample.evalBoardings(spt);
         double walkDistance = sample.evalWalkDistance(spt);        
-        Date startTime = sample.evalStartTime(spt);
-        Date arrivalTime = sample.evalArrivalTime(spt);
+        //Date startTime = sample.evalStartTime(spt);
+        //Date arrivalTime = sample.evalArrivalTime(spt);  
+        Itinerary itinerary = sample.evalItinerary(spt);     
+        Date startTime = itinerary.startTime.getTime();
+        Date arrivalTime = itinerary.endTime.getTime();
         
         return new OtpsEvaluatedIndividual(this, time, boardings, walkDistance, startTime, arrivalTime);
     }
