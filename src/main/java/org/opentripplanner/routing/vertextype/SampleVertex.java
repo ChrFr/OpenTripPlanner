@@ -4,6 +4,7 @@ import com.vividsolutions.jts.geom.Coordinate;
 import org.opentripplanner.routing.edgetype.TemporaryEdge;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
+import org.opentripplanner.util.NonLocalizedString;
 
 /**
  * A vertex representing a Sample in the Analyst sense -- a temporary and nondestructive linkage of
@@ -36,7 +37,7 @@ public class SampleVertex extends StreetVertex implements TemporaryVertex  {
     }
 
     public SampleVertex (Graph g, Coordinate c) {
-        super(g, null, c, null);
+        super(g, "", c, new NonLocalizedString(""));
     }
 
     @Override
