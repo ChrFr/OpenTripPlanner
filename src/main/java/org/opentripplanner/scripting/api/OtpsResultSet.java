@@ -129,7 +129,8 @@ public class OtpsResultSet{
 		OtpsEvaluatedIndividual bestIndividual;
 		List<OtpsEvaluatedIndividual> evaluatedIndividuals = new ArrayList<>();
 		for(int i = 0; i < length(); i++){			
-			if ((times[i] == null && timesToMerge[i] != null) || timesToMerge[i] < times[i])
+			// take passed individual only if reachable and time is smaller
+			if (timesToMerge[i] != null && (times[i] == null || timesToMerge[i] < times[i]))
 				bestIndividual = setToMerge.evaluatedIndividuals.get(i);
 			else
 				bestIndividual = this.evaluatedIndividuals.get(i);
