@@ -61,7 +61,11 @@ public class OtpsSPT {
      * @return The evualuated value, or NULL if no evaluation can be done (out of range, non snappable).
      */
     public OtpsEvaluatedIndividual eval(OtpsIndividual individual) {
-        return individual.eval(spt, sampleFactory);
+        return individual.eval(spt, sampleFactory, false);
+    }
+    
+    public OtpsEvaluatedIndividual eval(OtpsIndividual individual, boolean evalItineraries) {
+        return individual.eval(spt, sampleFactory, evalItineraries);
     }
 
     /**
@@ -88,10 +92,10 @@ public class OtpsSPT {
      * @param inputField field, that will be used for aggregation
      * @return an OtpsResultSet containing the evaluated results, may be used for aggregations and accumulations
      */
-    public OtpsResultSet getResultSet(Iterable<OtpsIndividual> population) {
+    public OtpsResultSet getResultSet(Iterable<OtpsIndividual> population, boolean evalItineraries) {
         List<OtpsEvaluatedIndividual> retval = new ArrayList<>();
         for (OtpsIndividual individual : population) {
-            OtpsEvaluatedIndividual evaluated = eval(individual);
+            OtpsEvaluatedIndividual evaluated = eval(individual, evalItineraries);
             // ResultSet needs information about every individual (the unreachable ones too)
             // but eval returns null if time is MaxValue
             if (evaluated == null)

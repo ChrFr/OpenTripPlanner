@@ -136,7 +136,7 @@ public class OtpsIndividual {
     }
 
     protected synchronized OtpsEvaluatedIndividual eval(ShortestPathTree spt,
-            SampleFactory sampleFactory) {
+            SampleFactory sampleFactory, boolean evalItineraries) {
         Graph sptGraph = spt.getOptions().getRoutingContext().graph;
         if (!isSampleSet || graph != sptGraph) {
             cachedSample = sampleFactory.getSample(lon, lat);
@@ -153,11 +153,14 @@ public class OtpsIndividual {
         OtpsSample sample = new OtpsSample(cachedSample);
         
         int boardings = sample.evalBoardings(spt);
-        double walkDistance = sample.evalWalkDistance(spt);  
+        double walkDistance = sample.evalWalkDistance(spt);          
         Date startTime, arrivalTime;
-        Itinerary itinerary = sample.evalItinerary(spt);     
-        startTime = itinerary.startTime.getTime();
-        arrivalTime = itinerary.endTime.getTime();
+        startTime = arrivalTime = null;
+        if(evalItineraries){
+	        Itinerary itinerary = sample.evalItinerary(spt);
+	        startTime = itinerary.startTime.getTime();
+	        arrivalTime = itinerary.endTime.getTime();
+        }
         
         return new OtpsEvaluatedIndividual(this, time, boardings, walkDistance, startTime, arrivalTime);
     }
