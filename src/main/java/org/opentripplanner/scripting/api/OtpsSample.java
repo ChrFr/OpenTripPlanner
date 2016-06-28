@@ -13,12 +13,16 @@
 
 package org.opentripplanner.scripting.api;
 
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.Locale;
 
 import org.opentripplanner.analyst.core.Sample;
 import org.opentripplanner.api.model.Itinerary;
 import org.opentripplanner.api.resource.GraphPathToTripPlanConverter;
 import org.opentripplanner.routing.core.State;
+import org.opentripplanner.routing.error.TrivialPathException;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.spt.GraphPath;
 import org.opentripplanner.routing.spt.ShortestPathTree;
@@ -86,9 +90,26 @@ public class OtpsSample extends Sample {
     public Itinerary evalItinerary(final ShortestPathTree spt){
 		int idx = bestIndex(spt); 
 		Vertex v = (idx == 0) ? v0: v1;
+		int d = (idx == 0) ? d0: d1;
 		
-		GraphPath path = spt.getPath(v, false);		
-		return GraphPathToTripPlanConverter.generateItinerary(path, false, new Locale("en"));
+		GraphPath path = spt.getPath(v, true);	
+		Itinerary itinerary;
+		try{
+			itinerary = GraphPathToTripPlanConverter.generateItinerary(path, false, new Locale("en"));
+		}
+		// paths with start = endpoint are trivial (no traverse)
+		catch (TrivialPathException e){
+			itinerary = new Itinerary();
+			Date startDate = new Date(spt.getState(v).getTimeSeconds() * 1000);
+			itinerary.startTime = new GregorianCalendar();
+			itinerary.startTime.setTime(startDate);
+			itinerary.endTime = new GregorianCalendar();
+			itinerary.endTime.setTime(startDate);
+		}
+		// itineraries start from known vertex -> add walking time from sampled vertex to this start
+		double walkSpeed = spt.getOptions().walkSpeed;
+		itinerary.startTime.add(Calendar.SECOND, (int) (-d / walkSpeed));
+		return itinerary;
     }
     
 }

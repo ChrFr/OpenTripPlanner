@@ -153,12 +153,11 @@ public class OtpsIndividual {
         OtpsSample sample = new OtpsSample(cachedSample);
         
         int boardings = sample.evalBoardings(spt);
-        double walkDistance = sample.evalWalkDistance(spt);        
-        //Date startTime = sample.evalStartTime(spt);
-        //Date arrivalTime = sample.evalArrivalTime(spt);  
+        double walkDistance = sample.evalWalkDistance(spt);  
+        Date startTime, arrivalTime;
         Itinerary itinerary = sample.evalItinerary(spt);     
-        Date startTime = itinerary.startTime.getTime();
-        Date arrivalTime = itinerary.endTime.getTime();
+        startTime = itinerary.startTime.getTime();
+        arrivalTime = itinerary.endTime.getTime();
         
         return new OtpsEvaluatedIndividual(this, time, boardings, walkDistance, startTime, arrivalTime);
     }
