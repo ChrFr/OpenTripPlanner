@@ -118,4 +118,27 @@ public class OtpsRoutingRequest {
     public void setBannedRoutes(String routeSpecList) {
         req.bannedRoutes = RouteMatcher.parse(routeSpecList);
     }
+    
+    /** maximum number of transfers*/
+    public void setMaxTransfers(int transfers){
+    	req.maxTransfers = transfers;
+    }
+
+    /** Whether the trip must be wheelchair accessible. */
+    public void setWheelChairAccessible(boolean wheelChairAccessible){
+    	req.wheelchairAccessible = wheelChairAccessible;
+    }
+
+    /** The maximum slope of streets for wheelchair trips. */
+    public void setMaxSlope(double maxSlope){
+    	req.maxSlope = maxSlope;
+    }
+    
+    /**
+     * maximum time (in seconds) of pre-transit travel when using drive-to-transit (park and
+     * ride or kiss and ride)
+     */
+    public void setMaxPreTransitTime(int maxPreTransitTime){
+    	req.maxPreTransitTime = maxPreTransitTime;
+    }
 }

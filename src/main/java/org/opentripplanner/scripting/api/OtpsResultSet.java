@@ -239,6 +239,20 @@ public class OtpsResultSet{
 		return data;
 	}
 	
+	public String[] getTraverseModes(){
+		String[] modes = new String[length()];
+		for (int i = 0; i < length(); i++)
+			modes[i] = evaluatedIndividuals.get(i).getModes();
+		return modes;
+	}
+	
+	public Long[] getWaitingTimes(){
+		Long[] waitingTimes = new Long[length()];
+		for (int i = 0; i < length(); i++)
+			waitingTimes[i] = evaluatedIndividuals.get(i).getWaitingTime();
+		return waitingTimes;
+	}
+	
 	public int length(){
 		return evaluatedIndividuals.size();
 	}

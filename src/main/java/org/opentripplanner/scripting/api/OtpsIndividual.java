@@ -14,10 +14,13 @@
 package org.opentripplanner.scripting.api;
 
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.opentripplanner.analyst.core.Sample;
 import org.opentripplanner.analyst.request.SampleFactory;
 import org.opentripplanner.api.model.Itinerary;
+import org.opentripplanner.api.model.Leg;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.spt.ShortestPathTree;
@@ -156,13 +159,24 @@ public class OtpsIndividual {
         double walkDistance = sample.evalWalkDistance(spt);          
         Date startTime, arrivalTime;
         startTime = arrivalTime = null;
+        String modes = "";
+        Long waitingTime = null;
+        
         if(evalItineraries){
 	        Itinerary itinerary = sample.evalItinerary(spt);
-	        startTime = itinerary.startTime.getTime();
+	        
+	        startTime = itinerary.startTime.getTime();	        
 	        arrivalTime = itinerary.endTime.getTime();
+	        waitingTime = itinerary.waitingTime;
+	        
+	        Set<String> uniqueModes = new HashSet<>();
+	        
+	        for (Leg leg: itinerary.legs)
+	        	uniqueModes.add(leg.mode);
+	        modes = uniqueModes.toString();
         }
         
-        return new OtpsEvaluatedIndividual(this, time, boardings, walkDistance, startTime, arrivalTime);
+        return new OtpsEvaluatedIndividual(this, time, boardings, walkDistance, startTime, arrivalTime, modes, waitingTime);
     }
 
     @Override

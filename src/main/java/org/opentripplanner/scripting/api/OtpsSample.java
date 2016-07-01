@@ -105,6 +105,7 @@ public class OtpsSample extends Sample {
 			itinerary.startTime.setTime(startDate);
 			itinerary.endTime = new GregorianCalendar();
 			itinerary.endTime.setTime(startDate);
+			itinerary.waitingTime = 0;
 		}
 		// itineraries start from known vertex -> subtract walking time from sampled vertex to this start (to add it to total time)
 		double walkSpeed = spt.getOptions().walkSpeed;

@@ -34,18 +34,23 @@ public class OtpsEvaluatedIndividual {
 
     private double walkDistance;
     
-    private Date startTime;
+    private Date startTime;    
+    private Date arrivalTime;    
+    private String modes;
+    private Long waitingTime;
     
-    private Date arrivalTime;
 
 	protected OtpsEvaluatedIndividual(OtpsIndividual individual, long time, int boardings,
-            double walkDistance, Date startTime, Date arrivalTime) {
+            double walkDistance, Date startTime, Date arrivalTime, String modes,
+            Long waitingTime) {
         this.individual = individual;
         this.time = time;
         this.boardings = boardings;
         this.walkDistance = walkDistance;
         this.startTime = startTime;
         this.arrivalTime = arrivalTime;
+        this.modes = modes;
+        this.waitingTime = waitingTime;
     }
 	
 	protected OtpsEvaluatedIndividual(OtpsIndividual individual) {
@@ -55,6 +60,8 @@ public class OtpsEvaluatedIndividual {
         this.walkDistance = Double.MAX_VALUE;
         this.startTime = null;
         this.arrivalTime = null;
+        this.modes = "unknown";
+        this.waitingTime = null;
     }
 
     /**
@@ -89,6 +96,14 @@ public class OtpsEvaluatedIndividual {
     }
 
     /**
+     * @return The used traverse modes. Each mode is listed only once, even
+     * if used multiple times. 
+     */
+	public String getModes() {
+		return modes;
+	}
+
+    /**
      * @return The individual evaluated (the same individual from the evuluated population).
      */
     public OtpsIndividual getIndividual() {
@@ -109,6 +124,14 @@ public class OtpsEvaluatedIndividual {
      */
 	public Date getArrivalTime() {
 		return arrivalTime;
+	}
+	
+    /**
+     * @return summed up waiting times during the trip
+	 *
+     */
+	public Long getWaitingTime() {
+		return waitingTime;
 	}
 
     @Override
