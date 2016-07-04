@@ -161,6 +161,8 @@ public class OtpsIndividual {
         startTime = arrivalTime = null;
         String modes = "";
         Long waitingTime = null;
+        Double elevationGained = null;
+        Double elevationLost = null;
         
         if(evalItineraries){
 	        Itinerary itinerary = sample.evalItinerary(spt);
@@ -168,6 +170,8 @@ public class OtpsIndividual {
 	        startTime = itinerary.startTime.getTime();	        
 	        arrivalTime = itinerary.endTime.getTime();
 	        waitingTime = itinerary.waitingTime;
+	        elevationGained = itinerary.elevationGained;
+	        elevationLost = itinerary.elevationLost;
 	        
 	        Set<String> uniqueModes = new HashSet<>();
 	        
@@ -176,7 +180,7 @@ public class OtpsIndividual {
 	        modes = uniqueModes.toString();
         }
         
-        return new OtpsEvaluatedIndividual(this, time, boardings, walkDistance, startTime, arrivalTime, modes, waitingTime);
+        return new OtpsEvaluatedIndividual(this, time, boardings, walkDistance, startTime, arrivalTime, modes, waitingTime, elevationGained, elevationLost);
     }
 
     @Override

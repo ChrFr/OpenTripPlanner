@@ -253,6 +253,20 @@ public class OtpsResultSet{
 		return waitingTimes;
 	}
 	
+	public Double[] getElevationGained(){
+		Double[] elevationGained = new Double[length()];
+		for (int i = 0; i < length(); i++)
+			elevationGained[i] = evaluatedIndividuals.get(i).getElevationGained();
+		return elevationGained;
+	}
+	
+	public Double[] getElevationLost(){
+		Double[] elevationLost = new Double[length()];
+		for (int i = 0; i < length(); i++)
+			elevationLost[i] = evaluatedIndividuals.get(i).getElevationLost();
+		return elevationLost;
+	}
+	
 	public int length(){
 		return evaluatedIndividuals.size();
 	}

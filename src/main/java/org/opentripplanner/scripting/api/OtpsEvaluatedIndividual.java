@@ -38,11 +38,13 @@ public class OtpsEvaluatedIndividual {
     private Date arrivalTime;    
     private String modes;
     private Long waitingTime;
+    private Double elevationGained;
+    private Double elevationLost;
     
 
 	protected OtpsEvaluatedIndividual(OtpsIndividual individual, long time, int boardings,
             double walkDistance, Date startTime, Date arrivalTime, String modes,
-            Long waitingTime) {
+            Long waitingTime, Double elevationGained, Double elevationLost) {
         this.individual = individual;
         this.time = time;
         this.boardings = boardings;
@@ -51,8 +53,10 @@ public class OtpsEvaluatedIndividual {
         this.arrivalTime = arrivalTime;
         this.modes = modes;
         this.waitingTime = waitingTime;
+        this.elevationGained = elevationGained;
+        this.elevationLost = elevationLost;
     }
-	
+
 	protected OtpsEvaluatedIndividual(OtpsIndividual individual) {
         this.individual = individual;
         this.time = Long.MAX_VALUE;
@@ -132,6 +136,14 @@ public class OtpsEvaluatedIndividual {
      */
 	public Long getWaitingTime() {
 		return waitingTime;
+	}
+	
+	public Double getElevationGained() {
+		return elevationGained;
+	}
+	
+	public Double getElevationLost() {
+		return elevationLost;
 	}
 
     @Override
