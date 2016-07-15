@@ -94,10 +94,13 @@ public class OtpsSample extends Sample {
 		
 		GraphPath path = spt.getPath(v, true);	
 		Itinerary itinerary;
+		double walkSpeed = spt.getOptions().walkSpeed;
 		try{
 			itinerary = GraphPathToTripPlanConverter.generateItinerary(path, true, new Locale("en"));
+			// itineraries start from known vertex -> subtract walking time from sampled vertex to this start (to add it to total time)			
+			itinerary.startTime.add(Calendar.SECOND, (int) (-d / walkSpeed));
 		}
-		// paths with start = endpoint are trivial (no traverse)
+		// paths with start == endpoint are trivial (no traverse)
 		catch (TrivialPathException e){
 			itinerary = new Itinerary();
 			Date startDate = new Date(spt.getState(v).getTimeSeconds() * 1000);
@@ -106,10 +109,9 @@ public class OtpsSample extends Sample {
 			itinerary.endTime = new GregorianCalendar();
 			itinerary.endTime.setTime(startDate);
 			itinerary.waitingTime = 0;
+			itinerary.startTime.add(Calendar.SECOND, (int) (-d / walkSpeed));
+			itinerary.endTime.add(Calendar.SECOND, (int) (d / walkSpeed));
 		}
-		// itineraries start from known vertex -> subtract walking time from sampled vertex to this start (to add it to total time)
-		double walkSpeed = spt.getOptions().walkSpeed;
-		itinerary.startTime.add(Calendar.SECOND, (int) (-d / walkSpeed));
 		return itinerary;
     }
     
