@@ -141,6 +141,13 @@ public class OtpsResultSet{
 		mergedResultSet.setSource(source);
 		return mergedResultSet;
 	}
+	/*
+	public OtpsResultSet append(OtpsResultSet setToAppend){
+		OtpsResultSet newResultSet = new OtpsResultSet();
+		newResultSet.setResults(evaluatedIndividuals);
+		newResultSet.setSource(source);
+		return newResultSet;
+	}*/
 	
 	public void setAggregationMode(AggregationMode mode){
 		aggregationMode = mode;
@@ -187,6 +194,34 @@ public class OtpsResultSet{
 		return startTimes;
 	}
 
+	/**
+     * @return the first start time out of all results
+	 *
+     */
+	public Date getMinStartTime(){
+		Date minStartTime = new Date(Long.MAX_VALUE);
+		for (int i = 0; i < length(); i++){
+			Date time = evaluatedIndividuals.get(i).getStartTime();
+			if (time != null && time.compareTo(minStartTime) < 0)
+				minStartTime = time;
+		}
+		return minStartTime;
+	}
+
+	/**
+     * @return the first start time out of all results
+	 *
+     */
+	public Date getMinArrivalTime(){
+		Date minArrivalTime = new Date(Long.MAX_VALUE);
+		for (int i = 0; i < length(); i++){
+			Date time = evaluatedIndividuals.get(i).getArrivalTime();
+			if (time.compareTo(minArrivalTime) < 0)
+				minArrivalTime = time;
+		}
+		return minArrivalTime;
+	}
+	
     /**
      * @return The actual times, the individuals were visited
 	 *
@@ -207,7 +242,7 @@ public class OtpsResultSet{
 		for (int i = 0; i < length(); i++)
 			times[i] = evaluatedIndividuals.get(i).getTime();
 		return times;
-	}
+	}	
 
     /**
      * @return most likely the travel times, respectively accumulated values
