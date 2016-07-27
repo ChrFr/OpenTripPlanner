@@ -13,7 +13,7 @@
 
 package org.opentripplanner.scripting.api;
 
-import java.util.Date;
+import java.util.Calendar;
 
 /**
  * This class encapsulate both an individual and evaluated values (time...).
@@ -34,17 +34,17 @@ public class OtpsEvaluatedIndividual {
 
     private double walkDistance;
     
-    private Date startTime;    
-    private Date arrivalTime;    
+    private Calendar startTime;    
+    private Calendar arrivalTime;    
     private String modes;
     private Long waitingTime;
     private Double elevationGained;
     private Double elevationLost;
-    
+    private long timeToItinerary;
 
 	protected OtpsEvaluatedIndividual(OtpsIndividual individual, long time, int boardings,
-            double walkDistance, Date startTime, Date arrivalTime, String modes,
-            Long waitingTime, Double elevationGained, Double elevationLost) {
+            double walkDistance, long timeToItinerary, Calendar startTime, Calendar arrivalTime, 
+            String modes, Long waitingTime, Double elevationGained, Double elevationLost) {
         this.individual = individual;
         this.time = time;
         this.boardings = boardings;
@@ -55,6 +55,7 @@ public class OtpsEvaluatedIndividual {
         this.waitingTime = waitingTime;
         this.elevationGained = elevationGained;
         this.elevationLost = elevationLost;
+        this.timeToItinerary = timeToItinerary;
     }
 
 	protected OtpsEvaluatedIndividual(OtpsIndividual individual) {
@@ -118,7 +119,7 @@ public class OtpsEvaluatedIndividual {
      * @return The actual time, the trip to this point started
 	 *
      */
-    public Date getStartTime() {
+    public Calendar getStartTime() {
 		return startTime;
 	}
 
@@ -126,7 +127,7 @@ public class OtpsEvaluatedIndividual {
      * @return The actual time, this point was visited
 	 *
      */
-	public Date getArrivalTime() {
+	public Calendar getArrivalTime() {
 		return arrivalTime;
 	}
 	
@@ -149,5 +150,9 @@ public class OtpsEvaluatedIndividual {
     @Override
     public String toString() {
         return individual.toString() + " -> t=" + (getTime() == null ? "null" : (getTime() + "s"));
-    }
+    }    
+
+	public long getTimeToItinerary() {
+		return timeToItinerary;
+	}
 }

@@ -64,12 +64,14 @@ public class OtpsSample extends Sample {
      * evaluates both vertices of this sample in the given shortest path tree
      * with the given Evaluation and returns the smaller value of the two resulting ones
      * 
+     * already contains the time needed to reach start point of shortest path on foot
+     * 
      */
 	public long eval(final ShortestPathTree spt){
 		int idx = bestIndex(spt); 
 		Vertex v = (idx == 0) ? v0: v1;
 		State s = spt.getState(v);
-		int d = (idx == 0) ? d0: d1;
+		int d = evalDistanceToItinerary(spt);
 
         double walkSpeed = spt.getOptions().walkSpeed;
 		long value = (long)(s.getActiveTime() + d / walkSpeed);
@@ -81,26 +83,29 @@ public class OtpsSample extends Sample {
 		int idx = bestIndex(spt); 
 		Vertex v = (idx == 0) ? v0: v1;
 		State s = spt.getState(v);
-		int d = (idx == 0) ? d0: d1;
+		int d = evalDistanceToItinerary(spt);
 		
         double m = s.getWalkDistance() + d;
         return m;
     }
-    
+
+    /**
+     * evaluates the itinerary of the shortest path
+     * doesn't take account of time needed to reach itinerary
+     * 
+     */
     public Itinerary evalItinerary(final ShortestPathTree spt){
 		int idx = bestIndex(spt); 
 		Vertex v = (idx == 0) ? v0: v1;
-		int d = (idx == 0) ? d0: d1;
+		int d = evalDistanceToItinerary(spt);
 		
 		GraphPath path = spt.getPath(v, true);	
 		Itinerary itinerary;
 		double walkSpeed = spt.getOptions().walkSpeed;
 		try{
 			itinerary = GraphPathToTripPlanConverter.generateItinerary(path, true, new Locale("en"));
-			// itineraries start from known vertex -> subtract walking time from sampled vertex to this start (to add it to total time)			
-			itinerary.startTime.add(Calendar.SECOND, (int) (-d / walkSpeed));
 		}
-		// paths with start == endpoint are trivial (no traverse)
+		// paths with start = endpoint are trivial (no traverse)
 		catch (TrivialPathException e){
 			itinerary = new Itinerary();
 			Date startDate = new Date(spt.getState(v).getTimeSeconds() * 1000);
@@ -109,10 +114,15 @@ public class OtpsSample extends Sample {
 			itinerary.endTime = new GregorianCalendar();
 			itinerary.endTime.setTime(startDate);
 			itinerary.waitingTime = 0;
-			itinerary.startTime.add(Calendar.SECOND, (int) (-d / walkSpeed));
 			itinerary.endTime.add(Calendar.SECOND, (int) (d / walkSpeed));
 		}
 		return itinerary;
+    }
+    
+    public int evalDistanceToItinerary(final ShortestPathTree spt){
+		int idx = bestIndex(spt); 
+		int d = (idx == 0) ? d0: d1;
+		return d;
     }
     
 }

@@ -17,6 +17,7 @@ import org.opentripplanner.analyst.batch.Individual;
 import org.opentripplanner.analyst.batch.Population;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -187,21 +188,33 @@ public class OtpsResultSet{
      * @return The actual times, the trips to the indivduals started
 	 *
      */
-	public Date[] getStartTimes() {
-		Date[] startTimes = new Date[length()];
+	public Calendar[] getStartTimes() {
+		Calendar[] startTimes = new Calendar[length()];
 		for (int i = 0; i < length(); i++)
 			startTimes[i] = evaluatedIndividuals.get(i).getStartTime();
 		return startTimes;
+	}
+	
+    /**
+     * @return The actual times, the individuals were visited
+	 *
+     */
+	public Calendar[] getArrivalTimes() {
+		Calendar[] arrivalTimes = new Calendar[length()];
+		for (int i = 0; i < length(); i++)
+			arrivalTimes[i] = evaluatedIndividuals.get(i).getArrivalTime();
+		return arrivalTimes;
 	}
 
 	/**
      * @return the first start time out of all results
 	 *
      */
-	public Date getMinStartTime(){
-		Date minStartTime = new Date(Long.MAX_VALUE);
+	public Calendar getMinStartTime(){
+		Calendar minStartTime = Calendar.getInstance();
+		minStartTime.setTime(new Date(Long.MAX_VALUE));
 		for (int i = 0; i < length(); i++){
-			Date time = evaluatedIndividuals.get(i).getStartTime();
+			Calendar time = evaluatedIndividuals.get(i).getStartTime();
 			if (time != null && time.compareTo(minStartTime) < 0)
 				minStartTime = time;
 		}
@@ -212,25 +225,15 @@ public class OtpsResultSet{
      * @return the first start time out of all results
 	 *
      */
-	public Date getMinArrivalTime(){
-		Date minArrivalTime = new Date(Long.MAX_VALUE);
+	public Calendar getMinArrivalTime(){
+		Calendar minArrivalTime = Calendar.getInstance();
+		minArrivalTime.setTime(new Date(Long.MAX_VALUE));
 		for (int i = 0; i < length(); i++){
-			Date time = evaluatedIndividuals.get(i).getArrivalTime();
+			Calendar time = evaluatedIndividuals.get(i).getArrivalTime();
 			if (time.compareTo(minArrivalTime) < 0)
 				minArrivalTime = time;
 		}
 		return minArrivalTime;
-	}
-	
-    /**
-     * @return The actual times, the individuals were visited
-	 *
-     */
-	public Date[] getArrivalTimes() {
-		Date[] arrivalTimes = new Date[length()];
-		for (int i = 0; i < length(); i++)
-			arrivalTimes[i] = evaluatedIndividuals.get(i).getArrivalTime();
-		return arrivalTimes;
 	}
 
     /**
@@ -300,6 +303,13 @@ public class OtpsResultSet{
 		for (int i = 0; i < length(); i++)
 			elevationLost[i] = evaluatedIndividuals.get(i).getElevationLost();
 		return elevationLost;
+	}	
+
+	public Long[] getTimesToItineraries(){
+		Long[] timesToItinerary = new Long[length()];
+		for (int i = 0; i < length(); i++)
+			timesToItinerary[i] = evaluatedIndividuals.get(i).getTimeToItinerary();
+		return timesToItinerary;
 	}
 	
 	public int length(){

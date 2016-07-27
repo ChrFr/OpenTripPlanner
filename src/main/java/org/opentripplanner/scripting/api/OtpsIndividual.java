@@ -13,6 +13,7 @@
 
 package org.opentripplanner.scripting.api;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -156,8 +157,9 @@ public class OtpsIndividual {
         OtpsSample sample = new OtpsSample(cachedSample);
         
         int boardings = sample.evalBoardings(spt);
-        double walkDistance = sample.evalWalkDistance(spt);          
-        Date startTime, arrivalTime;
+        double walkDistance = sample.evalWalkDistance(spt);      
+        long timeToItinerary = (long) (sample.evalDistanceToItinerary(spt) / spt.getOptions().walkSpeed);    
+        Calendar startTime, arrivalTime;
         startTime = arrivalTime = null;
         String modes = "";
         Long waitingTime = null;
@@ -167,8 +169,8 @@ public class OtpsIndividual {
         if(evalItineraries){
 	        Itinerary itinerary = sample.evalItinerary(spt);
 	        
-	        startTime = itinerary.startTime.getTime();	        
-	        arrivalTime = itinerary.endTime.getTime();
+	        startTime = itinerary.startTime;	 
+	        arrivalTime = itinerary.endTime;
 	        waitingTime = itinerary.waitingTime;
 	        elevationGained = itinerary.elevationGained;
 	        elevationLost = itinerary.elevationLost;
@@ -180,7 +182,7 @@ public class OtpsIndividual {
 	        modes = uniqueModes.toString();
         }
         
-        return new OtpsEvaluatedIndividual(this, time, boardings, walkDistance, startTime, arrivalTime, modes, waitingTime, elevationGained, elevationLost);
+        return new OtpsEvaluatedIndividual(this, time, boardings, walkDistance, timeToItinerary, startTime, arrivalTime, modes, waitingTime, elevationGained, elevationLost);
     }
 
     @Override
