@@ -71,9 +71,11 @@ public class OtpsSample extends Sample {
 		int idx = bestIndex(spt); 
 		Vertex v = (idx == 0) ? v0: v1;
 		State s = spt.getState(v);
-		int d = evalDistanceToItinerary(spt);
+		int d = (idx == 0) ? d0: d1;
 
         double walkSpeed = spt.getOptions().walkSpeed;
+        if (s == null)
+        	return Long.MAX_VALUE;
 		long value = (long)(s.getActiveTime() + d / walkSpeed);
 		
 		return value;
@@ -83,7 +85,7 @@ public class OtpsSample extends Sample {
 		int idx = bestIndex(spt); 
 		Vertex v = (idx == 0) ? v0: v1;
 		State s = spt.getState(v);
-		int d = evalDistanceToItinerary(spt);
+		int d = (idx == 0) ? d0: d1;
 		
         double m = s.getWalkDistance() + d;
         return m;
@@ -97,7 +99,7 @@ public class OtpsSample extends Sample {
     public Itinerary evalItinerary(final ShortestPathTree spt){
 		int idx = bestIndex(spt); 
 		Vertex v = (idx == 0) ? v0: v1;
-		int d = evalDistanceToItinerary(spt);
+		int d = (idx == 0) ? d0: d1;
 		
 		GraphPath path = spt.getPath(v, true);	
 		Itinerary itinerary;
