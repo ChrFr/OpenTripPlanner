@@ -29,11 +29,10 @@ public class OtpsAccumulate {
 	public OtpsAccumulate(OtpsResultSet.AccumulationMode mode, Double[] params){
 		switch(mode){
 			case DECAY_ACCUMULATOR:
-				if(params == null || params.length < 2)
-					throw new IllegalArgumentException("mode DECAY_ACCUMULATOR needs halflifeminutes and a lambda as parameters");
+				if(params == null || params.length == 0)
+					throw new IllegalArgumentException("mode DECAY_ACCUMULATOR needs halflifeminutes as a parameter");
 				accumulator = new DecayAccumulator();
 				((DecayAccumulator)accumulator).setHalfLifeMinutes(params[0].intValue());
-				((DecayAccumulator)accumulator).lambda = params[1].intValue();
 				break;
 				
 			case THRESHOLD_ACCUMULATOR:
