@@ -188,8 +188,8 @@ public class OtpsResultSet{
      * @return The actual times, the trips to the indivduals started
 	 *
      */
-	public Calendar[] getStartTimes() {
-		Calendar[] startTimes = new Calendar[length()];
+	public Date[] getStartTimes() {
+		Date[] startTimes = new Date[length()];
 		for (int i = 0; i < length(); i++)
 			startTimes[i] = evaluatedIndividuals.get(i).getStartTime();
 		return startTimes;
@@ -199,8 +199,8 @@ public class OtpsResultSet{
      * @return The actual times, the individuals were visited
 	 *
      */
-	public Calendar[] getArrivalTimes() {
-		Calendar[] arrivalTimes = new Calendar[length()];
+	public Date[] getArrivalTimes() {
+		Date[] arrivalTimes = new Date[length()];
 		for (int i = 0; i < length(); i++)
 			arrivalTimes[i] = evaluatedIndividuals.get(i).getArrivalTime();
 		return arrivalTimes;
@@ -210,11 +210,10 @@ public class OtpsResultSet{
      * @return the first start time out of all results
 	 *
      */
-	public Calendar getMinStartTime(){
-		Calendar minStartTime = Calendar.getInstance();
-		minStartTime.setTime(new Date(Long.MAX_VALUE));
+	public Date getMinStartTime(){
+		Date minStartTime = new Date(Long.MAX_VALUE);
 		for (int i = 0; i < length(); i++){
-			Calendar time = evaluatedIndividuals.get(i).getStartTime();
+			Date time = evaluatedIndividuals.get(i).getStartTime();
 			if (time != null && time.compareTo(minStartTime) < 0)
 				minStartTime = time;
 		}
@@ -225,11 +224,10 @@ public class OtpsResultSet{
      * @return the first start time out of all results
 	 *
      */
-	public Calendar getMinArrivalTime(){
-		Calendar minArrivalTime = Calendar.getInstance();
-		minArrivalTime.setTime(new Date(Long.MAX_VALUE));
+	public Date getMinArrivalTime(){
+		Date minArrivalTime = new Date(Long.MAX_VALUE);
 		for (int i = 0; i < length(); i++){
-			Calendar time = evaluatedIndividuals.get(i).getArrivalTime();
+			Date time = evaluatedIndividuals.get(i).getArrivalTime();
 			if (time.compareTo(minArrivalTime) < 0)
 				minArrivalTime = time;
 		}
@@ -305,11 +303,27 @@ public class OtpsResultSet{
 		return elevationLost;
 	}	
 
-	public Long[] getTimesToItineraries(){
-		Long[] timesToItinerary = new Long[length()];
+	public Integer[] getTimesToItineraries(){
+		Integer[] timesToItinerary = new Integer[length()];
 		for (int i = 0; i < length(); i++)
 			timesToItinerary[i] = evaluatedIndividuals.get(i).getTimeToItinerary();
 		return timesToItinerary;
+	}
+	
+	public Date[] getSampledStartTimes(){
+		Date[] sampledStartTimes = new Date[length()];
+		for (int i = 0; i < length(); i++){
+			OtpsEvaluatedIndividual evaluated = evaluatedIndividuals.get(i);
+			Date startTime = evaluated.getStartTime();
+			if (startTime == null)
+				continue;
+			int timeToItinerary = evaluated.getTimeToItinerary();
+			Calendar c = Calendar.getInstance();
+			c.setTime(startTime);
+			c.add(Calendar.SECOND, -timeToItinerary);
+			sampledStartTimes[i] = c.getTime();
+		}
+		return sampledStartTimes;
 	}
 	
 	public int length(){

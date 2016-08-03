@@ -158,8 +158,8 @@ public class OtpsIndividual {
         
         int boardings = sample.evalBoardings(spt);
         double walkDistance = sample.evalWalkDistance(spt);      
-        long timeToItinerary = (long) (sample.evalDistanceToItinerary(spt) / spt.getOptions().walkSpeed);    
-        Calendar startTime, arrivalTime;
+        int timeToItinerary = (int) (sample.evalDistanceToItinerary(spt) / spt.getOptions().walkSpeed);    
+        Date startTime, arrivalTime;
         startTime = arrivalTime = null;
         String modes = "";
         Long waitingTime = null;
@@ -169,8 +169,8 @@ public class OtpsIndividual {
         if(evalItineraries){
 	        Itinerary itinerary = sample.evalItinerary(spt);
 	        
-	        startTime = itinerary.startTime;	 
-	        arrivalTime = itinerary.endTime;
+	        startTime = itinerary.startTime.getTime();	 
+	        arrivalTime = itinerary.endTime.getTime();
 	        waitingTime = itinerary.waitingTime;
 	        elevationGained = itinerary.elevationGained;
 	        elevationLost = itinerary.elevationLost;

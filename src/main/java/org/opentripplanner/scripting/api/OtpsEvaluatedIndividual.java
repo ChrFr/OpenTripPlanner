@@ -14,6 +14,7 @@
 package org.opentripplanner.scripting.api;
 
 import java.util.Calendar;
+import java.util.Date;
 
 /**
  * This class encapsulate both an individual and evaluated values (time...).
@@ -34,16 +35,16 @@ public class OtpsEvaluatedIndividual {
 
     private double walkDistance;
     
-    private Calendar startTime;    
-    private Calendar arrivalTime;    
+    private Date startTime;    
+    private Date arrivalTime;    
     private String modes;
     private Long waitingTime;
     private Double elevationGained;
     private Double elevationLost;
-    private long timeToItinerary;
+    private int timeToItinerary;
 
 	protected OtpsEvaluatedIndividual(OtpsIndividual individual, long time, int boardings,
-            double walkDistance, long timeToItinerary, Calendar startTime, Calendar arrivalTime, 
+            double walkDistance, int timeToItinerary, Date startTime, Date arrivalTime, 
             String modes, Long waitingTime, Double elevationGained, Double elevationLost) {
         this.individual = individual;
         this.time = time;
@@ -117,9 +118,10 @@ public class OtpsEvaluatedIndividual {
 
     /**
      * @return The actual time, the trip to this point started
+     * time to reach itinerary is not included
 	 *
      */
-    public Calendar getStartTime() {
+    public Date getStartTime() {
 		return startTime;
 	}
 
@@ -127,7 +129,7 @@ public class OtpsEvaluatedIndividual {
      * @return The actual time, this point was visited
 	 *
      */
-	public Calendar getArrivalTime() {
+	public Date getArrivalTime() {
 		return arrivalTime;
 	}
 	
@@ -152,7 +154,7 @@ public class OtpsEvaluatedIndividual {
         return individual.toString() + " -> t=" + (getTime() == null ? "null" : (getTime() + "s"));
     }    
 
-	public long getTimeToItinerary() {
+	public int getTimeToItinerary() {
 		return timeToItinerary;
 	}
 }
