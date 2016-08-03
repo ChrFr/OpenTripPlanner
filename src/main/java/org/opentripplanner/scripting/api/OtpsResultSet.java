@@ -75,7 +75,7 @@ public class OtpsResultSet{
 		List<OtpsIndividual> individuals = new ArrayList<>();
 		for(int i = 0; i < evaluatedIndividuals.size(); i++){			
 			OtpsEvaluatedIndividual evaluatedIndividual = evaluatedIndividuals.get(i);		
-			results[i] = Double.MAX_VALUE;				
+			results[i] = -1; // default value, -1 is treated as invalid route by aggregators and accumulators
 			OtpsIndividual individual = evaluatedIndividual.getIndividual();
 			individuals.add(individual);
 			Long time = evaluatedIndividual.getTime();
