@@ -51,6 +51,8 @@ public class OtpsIndividual {
     protected Graph graph;
 
     protected OtpsPopulation population;
+    
+    private boolean ignored = false;
 
     protected OtpsIndividual(double lat, double lon, String[] data, OtpsPopulation population) {
         this.lon = lon;
@@ -189,4 +191,12 @@ public class OtpsIndividual {
     public String toString() {
         return "Individual" + getLocation().toString();
     }
+
+	public boolean isIgnored() {
+		return ignored;
+	}
+
+	public void setIgnored(boolean ignored) {
+		this.ignored = ignored;
+	}
 }

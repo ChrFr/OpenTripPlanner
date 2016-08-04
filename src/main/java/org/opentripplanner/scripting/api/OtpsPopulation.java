@@ -109,10 +109,8 @@ public class OtpsPopulation implements Iterable<OtpsIndividual> {
      * May be used for accumulation.
      * 
      */  
-    public OtpsResultSet getEmptyResultSet(){
-    	int size = individuals.size();
-        OtpsResultSet resultSet = new OtpsResultSet();
-        resultSet.setResults(individuals, new double[size]); // results are 0
+    public OtpsResultSet createResultSet(){
+        OtpsResultSet resultSet = new OtpsResultSet(this);
     	return resultSet;
     }
 
@@ -153,5 +151,9 @@ public class OtpsPopulation implements Iterable<OtpsIndividual> {
         }
         reader.close();
         return ret;
+    }
+    
+    public int size(){
+    	return individuals.size();
     }
 }

@@ -86,25 +86,10 @@ public class OtpsSPT {
     }
     
     /**
-     * Evaluate the SPT for a whole population.
      * 
-     * @param population
-     * @param inputField field, that will be used for aggregation
-     * @return an OtpsResultSet containing the evaluated results, may be used for aggregations and accumulations
      */
-    public OtpsResultSet getResultSet(Iterable<OtpsIndividual> population, boolean evalItineraries) {
-        List<OtpsEvaluatedIndividual> retval = new ArrayList<>();
-        for (OtpsIndividual individual : population) {
-            OtpsEvaluatedIndividual evaluated = eval(individual, evalItineraries);
-            // ResultSet needs information about every individual (the unreachable ones too)
-            // but eval returns null if time is MaxValue
-            if (evaluated == null)
-            	evaluated = new OtpsEvaluatedIndividual(individual);
-            retval.add(evaluated);            
-        }
-        OtpsResultSet resultSet = new OtpsResultSet();
-        resultSet.setResults(retval);
-        return resultSet;
+    public void eval(OtpsResultSet resultSet, boolean evalItineraries) {
+        resultSet.evaluate(spt, sampleFactory, evalItineraries);
     }
 
     /**
