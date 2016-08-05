@@ -34,9 +34,9 @@ import org.opentripplanner.routing.spt.ShortestPathTree;
  */
 public class OtpsSPT {
 
-	private ShortestPathTree spt;
+    private ShortestPathTree spt;
 
-	private SampleFactory sampleFactory;
+    private SampleFactory sampleFactory;
 
     protected OtpsSPT(ShortestPathTree spt, SampleFactory sampleFactory) {
         this.spt = spt;
@@ -61,11 +61,7 @@ public class OtpsSPT {
      * @return The evualuated value, or NULL if no evaluation can be done (out of range, non snappable).
      */
     public OtpsEvaluatedIndividual eval(OtpsIndividual individual) {
-        return individual.eval(spt, sampleFactory, false);
-    }
-    
-    public OtpsEvaluatedIndividual eval(OtpsIndividual individual, boolean evalItineraries) {
-        return individual.eval(spt, sampleFactory, evalItineraries);
+        return individual.eval(spt, sampleFactory);
     }
 
     /**
@@ -84,13 +80,6 @@ public class OtpsSPT {
         }
         return retval;
     }
-    
-    /**
-     * 
-     */
-    public void eval(OtpsResultSet resultSet, boolean evalItineraries) {
-        resultSet.evaluate(spt, sampleFactory, evalItineraries);
-    }
 
     /**
      * Get the exact location of the origin of the search (from or to place, depending on the
@@ -101,5 +90,12 @@ public class OtpsSPT {
     public OtpsLatLon getSnappedOrigin() {
         return new OtpsLatLon(spt.getOptions().rctx.origin.getLat(),
                 spt.getOptions().rctx.origin.getLon());
+    }
+
+    /**
+     * 
+     */
+    public void eval(OtpsResultSet resultSet, boolean evalItineraries) {
+        resultSet.evaluate(spt, sampleFactory, evalItineraries);
     }
 }

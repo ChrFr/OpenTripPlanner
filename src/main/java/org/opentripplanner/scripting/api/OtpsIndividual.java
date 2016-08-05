@@ -13,15 +13,8 @@
 
 package org.opentripplanner.scripting.api;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
-
 import org.opentripplanner.analyst.core.Sample;
 import org.opentripplanner.analyst.request.SampleFactory;
-import org.opentripplanner.api.model.Itinerary;
-import org.opentripplanner.api.model.Leg;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.spt.ShortestPathTree;
@@ -34,7 +27,7 @@ import com.vividsolutions.jts.linearref.LengthIndexedLine;
  * An individual is a point with coordinates, associated with some optional values (string, floats,
  * integers...)
  * 
- * @author laurent, Christoph Franke
+ * @author laurent
  */
 public class OtpsIndividual {
 
@@ -51,8 +44,6 @@ public class OtpsIndividual {
     protected Graph graph;
 
     protected OtpsPopulation population;
-    
-    private boolean ignored = false;
 
     protected OtpsIndividual(double lat, double lon, String[] data, OtpsPopulation population) {
         this.lon = lon;
@@ -142,7 +133,7 @@ public class OtpsIndividual {
     }
 
     protected synchronized OtpsEvaluatedIndividual eval(ShortestPathTree spt,
-            SampleFactory sampleFactory, boolean evalItineraries) {
+            SampleFactory sampleFactory) {
         Graph sptGraph = spt.getOptions().getRoutingContext().graph;
         if (!isSampleSet || graph != sptGraph) {
             cachedSample = sampleFactory.getSample(lon, lat);
@@ -155,48 +146,13 @@ public class OtpsIndividual {
         long time = cachedSample.eval(spt);
         if (time == Long.MAX_VALUE)
             return null;
-        
-        OtpsSample sample = new OtpsSample(cachedSample);
-        
-        int boardings = sample.evalBoardings(spt);
-        double walkDistance = sample.evalWalkDistance(spt);      
-        int timeToItinerary = (int) (sample.evalDistanceToItinerary(spt) / spt.getOptions().walkSpeed);    
-        Date startTime, arrivalTime;
-        startTime = arrivalTime = null;
-        String modes = "";
-        Long waitingTime = null;
-        Double elevationGained = null;
-        Double elevationLost = null;
-        
-        if(evalItineraries){
-	        Itinerary itinerary = sample.evalItinerary(spt);
-	        
-	        startTime = itinerary.startTime.getTime();	 
-	        arrivalTime = itinerary.endTime.getTime();
-	        waitingTime = itinerary.waitingTime;
-	        elevationGained = itinerary.elevationGained;
-	        elevationLost = itinerary.elevationLost;
-	        
-	        Set<String> uniqueModes = new HashSet<>();
-	        
-	        for (Leg leg: itinerary.legs)
-	        	uniqueModes.add(leg.mode);
-	        modes = uniqueModes.toString();
-        }
-        
-        return new OtpsEvaluatedIndividual(this, time, boardings, walkDistance, timeToItinerary, startTime, arrivalTime, modes, waitingTime, elevationGained, elevationLost);
+        int boardings = cachedSample.evalBoardings(spt);
+        double walkDistance = cachedSample.evalWalkDistance(spt);
+        return new OtpsEvaluatedIndividual(this, time, boardings, walkDistance);
     }
 
     @Override
     public String toString() {
         return "Individual" + getLocation().toString();
     }
-
-	public boolean isIgnored() {
-		return ignored;
-	}
-
-	public void setIgnored(boolean ignored) {
-		this.ignored = ignored;
-	}
 }

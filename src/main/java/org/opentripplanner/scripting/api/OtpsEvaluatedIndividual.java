@@ -13,9 +13,6 @@
 
 package org.opentripplanner.scripting.api;
 
-import java.util.Calendar;
-import java.util.Date;
-
 /**
  * This class encapsulate both an individual and evaluated values (time...).
  * 
@@ -23,7 +20,7 @@ import java.util.Date;
  * 
  * @see OtpsSPT.eval()
  * 
- * @author laurent, Christoph Franke
+ * @author laurent
  */
 public class OtpsEvaluatedIndividual {
 
@@ -34,40 +31,13 @@ public class OtpsEvaluatedIndividual {
     private int boardings;
 
     private double walkDistance;
-    
-    private Date startTime;    
-    private Date arrivalTime;    
-    private String modes;
-    private Long waitingTime;
-    private Double elevationGained;
-    private Double elevationLost;
-    private int timeToItinerary;
 
-	protected OtpsEvaluatedIndividual(OtpsIndividual individual, long time, int boardings,
-            double walkDistance, int timeToItinerary, Date startTime, Date arrivalTime, 
-            String modes, Long waitingTime, Double elevationGained, Double elevationLost) {
+    protected OtpsEvaluatedIndividual(OtpsIndividual individual, long time, int boardings,
+            double walkDistance) {
         this.individual = individual;
         this.time = time;
         this.boardings = boardings;
         this.walkDistance = walkDistance;
-        this.startTime = startTime;
-        this.arrivalTime = arrivalTime;
-        this.modes = modes;
-        this.waitingTime = waitingTime;
-        this.elevationGained = elevationGained;
-        this.elevationLost = elevationLost;
-        this.timeToItinerary = timeToItinerary;
-    }
-
-	protected OtpsEvaluatedIndividual(OtpsIndividual individual) {
-        this.individual = individual;
-        this.time = Long.MAX_VALUE;
-        this.boardings = 255;
-        this.walkDistance = Double.MAX_VALUE;
-        this.startTime = null;
-        this.arrivalTime = null;
-        this.modes = "unknown";
-        this.waitingTime = null;
     }
 
     /**
@@ -102,59 +72,14 @@ public class OtpsEvaluatedIndividual {
     }
 
     /**
-     * @return The used traverse modes. Each mode is listed only once, even
-     * if used multiple times. 
-     */
-	public String getModes() {
-		return modes;
-	}
-
-    /**
      * @return The individual evaluated (the same individual from the evuluated population).
      */
     public OtpsIndividual getIndividual() {
         return individual;
     }
 
-    /**
-     * @return The actual time, the trip to this point started
-     * time to reach itinerary is not included
-	 *
-     */
-    public Date getStartTime() {
-		return startTime;
-	}
-
-    /**
-     * @return The actual time, this point was visited
-	 *
-     */
-	public Date getArrivalTime() {
-		return arrivalTime;
-	}
-	
-    /**
-     * @return summed up waiting times during the trip
-	 *
-     */
-	public Long getWaitingTime() {
-		return waitingTime;
-	}
-	
-	public Double getElevationGained() {
-		return elevationGained;
-	}
-	
-	public Double getElevationLost() {
-		return elevationLost;
-	}
-
     @Override
     public String toString() {
         return individual.toString() + " -> t=" + (getTime() == null ? "null" : (getTime() + "s"));
-    }    
-
-	public int getTimeToItinerary() {
-		return timeToItinerary;
-	}
+    }
 }
