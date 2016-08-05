@@ -49,10 +49,15 @@ public class OtpsResultSet{
 	private AggregationMode aggregationMode = AggregationMode.THRESHOLD_SUM_AGGREGATOR;
 	private AccumulationMode accumulationMode = AccumulationMode.THRESHOLD_ACCUMULATOR;
 	private OtpsIndividual source;
+	
+	private boolean evalItineraries;
+	private boolean[] skipIndividuals;
 
 	protected OtpsResultSet(OtpsPopulation population){
 		this.population = population;
 		evaluations = new OtpsResult[population.size()];
+		evalItineraries = false;
+		Arrays.fill(skipIndividuals, false);
 	}	
 	
 	private static ResultSet createBasicResultSet(OtpsPopulation population, double[] results){
@@ -79,13 +84,15 @@ public class OtpsResultSet{
 		resultSet = createBasicResultSet(population, results);
 	}
 		
-	protected void evaluate(ShortestPathTree spt, SampleFactory sampleFactory, boolean evalItineraries){
+	protected void evaluate(ShortestPathTree spt, SampleFactory sampleFactory){
 		
 		Graph sptGraph = spt.getOptions().getRoutingContext().graph;
 		int i = -1;
 		for (OtpsIndividual individual: population){
 		    i++;
 			evaluations[i] = null;
+			if (skipIndividuals[i])
+				continue;
 			
 			if (!individual.isSampleSet || individual.graph != sptGraph) {
 				individual.cachedSample = sampleFactory.getSample(individual.lon, individual.lat);
@@ -138,12 +145,15 @@ public class OtpsResultSet{
 
 	private void setInput(String inputField){
 		Double[] inputs = new Double[population.size()];
+		int i = 0;	
 		for(OtpsIndividual individual: population){
 			Double input = individual.getFloatData(inputField);	
+			inputs[i] = input;
+			i++;
 			if (input == null)
 				throw new IllegalArgumentException("Field " + inputField + " not found");
 		}	
-		int i = 0;	
+		i = 0;	
 		for(Individual individual: resultSet.population){
 			individual.input = inputs[i];
 			i++;
@@ -403,6 +413,14 @@ public class OtpsResultSet{
 	
 	public int size(){
 		return population.size();
+	}
+	
+	public void setEvalItineraries(boolean evalItineraries) {
+		this.evalItineraries = evalItineraries;
+	}
+
+	public void setSkipIndividuals(boolean[] skipIndividuals) {
+		this.skipIndividuals = skipIndividuals;
 	}
 	
 	// updates the results (only if the individuals were not ignored)

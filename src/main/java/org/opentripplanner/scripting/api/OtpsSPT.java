@@ -95,7 +95,7 @@ public class OtpsSPT {
     /**
      * 
      */
-    public void eval(OtpsResultSet resultSet, boolean evalItineraries) {
-        resultSet.evaluate(spt, sampleFactory, evalItineraries);
+    public void eval(OtpsResultSet resultSet) {
+        resultSet.evaluate(spt, sampleFactory);
     }
 }
