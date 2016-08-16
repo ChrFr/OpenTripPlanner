@@ -317,7 +317,7 @@ public class OtpsResultSet{
 			if (eval == null)
 				continue;
 			Date time = eval.getArrivalTime();
-			if (time != null && time.compareTo(minArrivalTime) < 0)
+			if (time != null && (minArrivalTime == null || time.compareTo(minArrivalTime) < 0))
 				minArrivalTime = time;
 		}
 		return minArrivalTime;
@@ -441,6 +441,20 @@ public class OtpsResultSet{
 				comparisons[i] = -2;
 			else
 				comparisons[i] = eval.getStartTime().compareTo(compareTime);			
+		}
+		return comparisons;
+	}
+	
+	//the value 0 if the argument Date is equal to this Date; a value less than 0 if this Date is before the Date argument; and a value greater than 0 if this Date is after the Date argument.
+	//2 if this Date is Null (no route found)
+	public int[] compareArrivalTime(Date compareTime){
+		int[] comparisons = new int[size()];
+		for (int i = 0; i < size(); i++){
+			OtpsResult eval = evaluations[i];
+			if(eval == null)
+				comparisons[i] = -2;
+			else
+				comparisons[i] = eval.getArrivalTime().compareTo(compareTime);			
 		}
 		return comparisons;
 	}
