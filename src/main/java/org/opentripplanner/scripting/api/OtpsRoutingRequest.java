@@ -141,4 +141,8 @@ public class OtpsRoutingRequest {
     public void setMaxPreTransitTime(int maxPreTransitTime){
     	req.maxPreTransitTime = maxPreTransitTime;
     }
+    
+    public Date getDateTime(){
+    	return req.getDateTime();
+    }
 }

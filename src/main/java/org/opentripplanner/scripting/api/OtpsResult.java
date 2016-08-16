@@ -2,7 +2,12 @@ package org.opentripplanner.scripting.api;
 
 import java.util.Calendar;
 import java.util.Date;
-
+/**
+ * results of evaluation 
+ * 
+ * @author Christoph Franke
+ *
+ */
 public class OtpsResult {
 
     protected long time = Long.MAX_VALUE;
@@ -14,7 +19,6 @@ public class OtpsResult {
     protected Long waitingTime = null;
     protected Double elevationGained = null;
     protected Double elevationLost = null;
-    protected int timeToItinerary = 0;
     protected OtpsIndividual individual;
     
 	public OtpsIndividual getIndividual() {
@@ -47,17 +51,4 @@ public class OtpsResult {
 	public Double getElevationLost() {
 		return elevationLost;
 	}
-	public int getTimeToItinerary() {
-		return timeToItinerary;
-	} 
-
-	public Date getSampledStartTime(){
-		if (startTime == null)
-			return null;
-		Calendar c = Calendar.getInstance();
-		c.setTime(startTime);
-		c.add(Calendar.SECOND, -timeToItinerary);
-		return c.getTime();
-	}
-
 }

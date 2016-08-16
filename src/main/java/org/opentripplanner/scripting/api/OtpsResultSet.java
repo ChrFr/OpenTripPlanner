@@ -16,13 +16,12 @@ package org.opentripplanner.scripting.api;
 import org.opentripplanner.analyst.batch.Individual;
 import org.opentripplanner.analyst.batch.Population;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
+import java.util.Iterator;
 
 import org.opentripplanner.analyst.batch.BasicPopulation;
 import org.opentripplanner.analyst.batch.ResultSet;
@@ -57,7 +56,8 @@ public class OtpsResultSet{
 		this.population = population;
 		evaluations = new OtpsResult[population.size()];
 		evalItineraries = false;
-		Arrays.fill(skipIndividuals, false);
+		skipIndividuals = new boolean[population.size()];
+		// Arrays.fill(skipIndividuals, false);
 	}	
 	
 	private static ResultSet createBasicResultSet(OtpsPopulation population, double[] results){
@@ -115,13 +115,26 @@ public class OtpsResultSet{
 		    
 		    evaluation.boardings = sample.evalBoardings(spt);
 		    evaluation.walkDistance = sample.evalWalkDistance(spt);      
-		    evaluation.timeToItinerary = (int) (sample.evalDistanceToItinerary(spt) / spt.getOptions().walkSpeed);   
+		    int timeToItinerary = (int) (sample.evalDistanceToItinerary(spt) / spt.getOptions().walkSpeed);   
 		    
 		    if(evalItineraries){
 		        Itinerary itinerary = sample.evalItinerary(spt);
+		       
+		        boolean arriveby = spt.getOptions().arriveBy;
+	    		Calendar c = Calendar.getInstance();
+		        Date startTime = itinerary.startTime.getTime();	 
+		        Date arrivalTime = itinerary.endTime.getTime();
+		        if (arriveby){
+		    		c.setTime(startTime);
+		    		c.add(Calendar.SECOND, -timeToItinerary);
+		        }
+		        else {
+		    		c.setTime(arrivalTime);
+		    		c.add(Calendar.SECOND, timeToItinerary);
+		        }
+		        evaluation.startTime = startTime;
+		        evaluation.arrivalTime = arrivalTime;
 		        
-		        evaluation.startTime = itinerary.startTime.getTime();	 
-		        evaluation.arrivalTime = itinerary.endTime.getTime();
 		        evaluation.waitingTime = itinerary.waitingTime;
 		        evaluation.elevationGained = itinerary.elevationGained;
 		        evaluation.elevationLost = itinerary.elevationLost;
@@ -180,7 +193,7 @@ public class OtpsResultSet{
      */	
 	public OtpsResultSet merge(OtpsResultSet setToMerge){
 		if (setToMerge.population != population)
-			throw new IllegalArgumentException("The populations of the sets to merge are not the same!");
+			throw new IllegalArgumentException("The sets are not based on the same population!");
 		
 		Long[] times = getTimes();
 		Long[] timesToMerge = setToMerge.getTimes();
@@ -244,6 +257,10 @@ public class OtpsResultSet{
 	
 	public OtpsResult[] getResults(){
 		return evaluations;
+	}	
+
+	public OtpsResult getResult(int i){
+		return evaluations[i];
 	}
 	
     /**
@@ -277,24 +294,24 @@ public class OtpsResultSet{
 	 *
      */
 	public Date getMinStartTime(){
-		Date minStartTime = new Date(Long.MAX_VALUE);
+		Date minStartTime = null;
 		for (int i = 0; i < size(); i++){
 			OtpsResult eval = evaluations[i];
 			if (eval == null)
 				continue;
 			Date time = eval.getStartTime();
-			if (time != null && time.compareTo(minStartTime) < 0)
+			if (time != null && (minStartTime == null || time.compareTo(minStartTime) < 0))
 				minStartTime = time;
 		}
 		return minStartTime;
 	}
 
 	/**
-     * @return the first start time out of all results
+     * @return the first arrival time out of all results
 	 *
      */
 	public Date getMinArrivalTime(){
-		Date minArrivalTime = new Date(Long.MAX_VALUE);
+		Date minArrivalTime = null;
 		for (int i = 0; i < size(); i++){
 			OtpsResult eval = evaluations[i];
 			if (eval == null)
@@ -391,25 +408,6 @@ public class OtpsResultSet{
 		}
 		return elevationLost;
 	}	
-
-	public Integer[] getTimesToItineraries(){
-		Integer[] timesToItinerary = new Integer[size()];
-		for (int i = 0; i < size(); i++){
-			OtpsResult eval = evaluations[i];
-			timesToItinerary[i] = (eval != null) ? eval.getTimeToItinerary(): null;
-		}
-		return timesToItinerary;
-	}
-	
-	// start time including time needed to reach itinerary from sampled vertex
-	public Date[] getSampledStartTimes(){
-		Date[] sampledStartTimes = new Date[size()];
-		for (int i = 0; i < size(); i++){
-			OtpsResult eval = evaluations[i];
-			sampledStartTimes[i] = (eval != null) ? eval.getSampledStartTime(): null;
-		}
-		return sampledStartTimes;
-	}
 	
 	public int size(){
 		return population.size();
@@ -423,8 +421,27 @@ public class OtpsResultSet{
 		this.skipIndividuals = skipIndividuals;
 	}
 	
-	// updates the results (only if the individuals were not ignored)
-	public void update(){
-		 
+	// updates this results with the results of given set (only valid routes, if given set contains invalid routes for certain individuals, keep existing result for those)
+	public void update(OtpsResultSet resultSet){
+		if (resultSet.population != population)
+			throw new IllegalArgumentException("The sets are not based on the same population!");
+		for (int i = 0; i < size(); i++){
+			if (resultSet.evaluations[i] != null)
+				evaluations[i] = resultSet.evaluations[i];
+		}
+	}
+	
+	//the value 0 if the argument Date is equal to this Date; a value less than 0 if this Date is before the Date argument; and a value greater than 0 if this Date is after the Date argument.
+	//2 if this Date is Null (no route found)
+	public int[] compareStartTime(Date compareTime){
+		int[] comparisons = new int[size()];
+		for (int i = 0; i < size(); i++){
+			OtpsResult eval = evaluations[i];
+			if(eval == null)
+				comparisons[i] = -2;
+			else
+				comparisons[i] = eval.getStartTime().compareTo(compareTime);			
+		}
+		return comparisons;
 	}
 }
