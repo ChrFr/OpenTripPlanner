@@ -34,11 +34,11 @@ import org.opentripplanner.routing.spt.ShortestPathTree;
  */
 public class OtpsSample extends Sample {
 	
-	public OtpsSample(Vertex v0, int d0, Vertex v1, int d1) {
+	protected OtpsSample(Vertex v0, int d0, Vertex v1, int d1) {
 		super(v0, d0, v1, d1);
 	}	
 
-	public OtpsSample(Sample sample) {
+	protected OtpsSample(Sample sample) {
 		super(sample.v0, sample.d0, sample.v1, sample.d1);
 	}
 	
@@ -81,7 +81,7 @@ public class OtpsSample extends Sample {
 		return value;
 	}	
 
-    public double evalWalkDistance(final ShortestPathTree spt) {
+	public double evalWalkDistance(final ShortestPathTree spt) {
 		int idx = bestIndex(spt); 
 		Vertex v = (idx == 0) ? v0: v1;
 		State s = spt.getState(v);
@@ -96,7 +96,7 @@ public class OtpsSample extends Sample {
      * doesn't take account of time needed to reach itinerary
      * 
      */
-    public Itinerary evalItinerary(final ShortestPathTree spt){
+	protected Itinerary evalItinerary(final ShortestPathTree spt){
 		int idx = bestIndex(spt); 
 		Vertex v = (idx == 0) ? v0: v1;
 		int d = (idx == 0) ? d0: d1;
@@ -121,7 +121,7 @@ public class OtpsSample extends Sample {
 		return itinerary;
     }
     
-    public int evalDistanceToItinerary(final ShortestPathTree spt){
+	protected int evalDistanceToItinerary(final ShortestPathTree spt){
 		int idx = bestIndex(spt); 
 		int d = (idx == 0) ? d0: d1;
 		return d;

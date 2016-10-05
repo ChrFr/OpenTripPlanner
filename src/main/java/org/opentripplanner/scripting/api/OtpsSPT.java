@@ -34,7 +34,7 @@ import org.opentripplanner.routing.spt.ShortestPathTree;
  */
 public class OtpsSPT {
 
-    private ShortestPathTree spt;
+    protected ShortestPathTree spt;
 
     private SampleFactory sampleFactory;
 
@@ -90,12 +90,5 @@ public class OtpsSPT {
     public OtpsLatLon getSnappedOrigin() {
         return new OtpsLatLon(spt.getOptions().rctx.origin.getLat(),
                 spt.getOptions().rctx.origin.getLon());
-    }
-
-    /**
-     * 
-     */
-    public void eval(OtpsResultSet resultSet) {
-        resultSet.evaluate(spt, sampleFactory);
     }
 }

@@ -14,8 +14,9 @@ public class OtpsResult {
     protected int boardings = 255;
     protected double walkDistance = Double.MAX_VALUE;	    
     protected Date startTime = null;    
-    protected Date arrivalTime = null;    
-    protected String modes = "unknown";
+    protected Date arrivalTime = null;   
+    protected Date arrivalLastUsedTransit = null; 
+	protected String modes = "unknown";
     protected Long waitingTime = null;
     protected Double elevationGained = null;
     protected Double elevationLost = null;
@@ -50,5 +51,8 @@ public class OtpsResult {
 	}
 	public Double getElevationLost() {
 		return elevationLost;
+	}   
+    public Date getArrivalLastUsedTransit() {
+		return arrivalLastUsedTransit;
 	}
 }

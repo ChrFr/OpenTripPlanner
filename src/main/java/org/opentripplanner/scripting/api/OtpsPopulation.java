@@ -103,17 +103,6 @@ public class OtpsPopulation implements Iterable<OtpsIndividual> {
         individuals.add(individual);
     }
 
-    /**
-     * Create a result-set based on currently populating individuals with empty results. 
-     * Results are set to zero, times etc. are set to default values
-     * May be used for accumulation.
-     * 
-     */  
-    public OtpsResultSet createResultSet(){
-        OtpsResultSet resultSet = new OtpsResultSet(this);
-    	return resultSet;
-    }
-
     @Override
     public Iterator<OtpsIndividual> iterator() {
         // This seems to work. What the use for Guava ForwardingIterator then?

@@ -115,6 +115,14 @@ public class OtpsEntryPoint {
         RoutingRequest rreq = new RoutingRequest();
         return new OtpsRoutingRequest(rreq);
     }
+    
+    /**
+     * @return A new plan request that can be used to plan route / shortest path tree on a router.
+     */
+    public OtpsManyToManyRequest createManyToManyRequest() {
+        RoutingRequest rreq = new RoutingRequest();
+        return new OtpsManyToManyRequest(rreq);
+    }
 
     /**
      * @return A new empty population.

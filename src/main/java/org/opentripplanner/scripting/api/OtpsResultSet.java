@@ -84,69 +84,69 @@ public class OtpsResultSet{
 		resultSet = createBasicResultSet(population, results);
 	}
 		
-	protected void evaluate(ShortestPathTree spt, SampleFactory sampleFactory){
-		
-		Graph sptGraph = spt.getOptions().getRoutingContext().graph;
-		int i = -1;
-		for (OtpsIndividual individual: population){
-		    i++;
-			evaluations[i] = null;
-			if (skipIndividuals[i])
-				continue;
-			
-			if (!individual.isSampleSet || individual.graph != sptGraph) {
-				individual.cachedSample = sampleFactory.getSample(individual.lon, individual.lat);
-		        // Note: sample can be null here
-				individual.graph = sptGraph;
-				individual.isSampleSet = true;
-		    }		
-			
-		    if (individual.cachedSample == null)
-		        continue;
-		    
-		    long time = individual.cachedSample.eval(spt);
-		    if (time == Long.MAX_VALUE)
-		        continue;
-
-			OtpsResult evaluation = new OtpsResult();
-			evaluations[i] = evaluation;
-		    evaluation.time = time;
-		    OtpsSample sample = new OtpsSample(individual.cachedSample);
-		    
-		    evaluation.boardings = sample.evalBoardings(spt);
-		    evaluation.walkDistance = sample.evalWalkDistance(spt);      
-		    int timeToItinerary = (int) (sample.evalDistanceToItinerary(spt) / spt.getOptions().walkSpeed);   
-		    
-		    if(evalItineraries){
-		        Itinerary itinerary = sample.evalItinerary(spt);
-		       
-		        boolean arriveby = spt.getOptions().arriveBy;
-	    		Calendar c = Calendar.getInstance();
-		        Date startTime = itinerary.startTime.getTime();	 
-		        Date arrivalTime = itinerary.endTime.getTime();
-		        if (arriveby){
-		    		c.setTime(startTime);
-		    		c.add(Calendar.SECOND, -timeToItinerary);
-		        }
-		        else {
-		    		c.setTime(arrivalTime);
-		    		c.add(Calendar.SECOND, timeToItinerary);
-		        }
-		        evaluation.startTime = startTime;
-		        evaluation.arrivalTime = arrivalTime;
-		        
-		        evaluation.waitingTime = itinerary.waitingTime;
-		        evaluation.elevationGained = itinerary.elevationGained;
-		        evaluation.elevationLost = itinerary.elevationLost;
-		        
-		        Set<String> uniqueModes = new HashSet<>();
-		        
-		        for (Leg leg: itinerary.legs)
-		        	uniqueModes.add(leg.mode);
-		        evaluation.modes = uniqueModes.toString();
-		    }
-		}
-    }
+//	protected void evaluate(ShortestPathTree spt, SampleFactory sampleFactory){
+//		
+//		Graph sptGraph = spt.getOptions().getRoutingContext().graph;
+//		int i = -1;
+//		for (OtpsIndividual individual: population){
+//		    i++;
+//			evaluations[i] = null;
+//			if (skipIndividuals[i])
+//				continue;
+//			
+//			if (!individual.isSampleSet || individual.graph != sptGraph) {
+//				individual.cachedSample = sampleFactory.getSample(individual.lon, individual.lat);
+//		        // Note: sample can be null here
+//				individual.graph = sptGraph;
+//				individual.isSampleSet = true;
+//		    }		
+//			
+//		    if (individual.cachedSample == null)
+//		        continue;
+//		    
+//		    long time = individual.cachedSample.eval(spt);
+//		    if (time == Long.MAX_VALUE)
+//		        continue;
+//
+//			OtpsResult evaluation = new OtpsResult();
+//			evaluations[i] = evaluation;
+//		    evaluation.time = time;
+//		    OtpsSample sample = new OtpsSample(individual.cachedSample);
+//		    
+//		    evaluation.boardings = sample.evalBoardings(spt);
+//		    evaluation.walkDistance = sample.evalWalkDistance(spt);      
+//		    int timeToItinerary = (int) (sample.evalDistanceToItinerary(spt) / spt.getOptions().walkSpeed);   
+//		    
+//		    if(evalItineraries){
+//		        Itinerary itinerary = sample.evalItinerary(spt);
+//		       
+//		        boolean arriveby = spt.getOptions().arriveBy;
+//	    		Calendar c = Calendar.getInstance();
+//		        Date startTime = itinerary.startTime.getTime();	 
+//		        Date arrivalTime = itinerary.endTime.getTime();
+//		        if (arriveby){
+//		    		c.setTime(startTime);
+//		    		c.add(Calendar.SECOND, -timeToItinerary);
+//		        }
+//		        else {
+//		    		c.setTime(arrivalTime);
+//		    		c.add(Calendar.SECOND, timeToItinerary);
+//		        }
+//		        evaluation.startTime = startTime;
+//		        evaluation.arrivalTime = arrivalTime;
+//		        
+//		        evaluation.waitingTime = itinerary.waitingTime;
+//		        evaluation.elevationGained = itinerary.elevationGained;
+//		        evaluation.elevationLost = itinerary.elevationLost;
+//		        
+//		        Set<String> uniqueModes = new HashSet<>();
+//		        
+//		        for (Leg leg: itinerary.legs)
+//		        	uniqueModes.add(leg.mode);
+//		        evaluation.modes = uniqueModes.toString();
+//		    }
+//		}
+//    }
 
 	public OtpsIndividual getSource() {
 		return source;
