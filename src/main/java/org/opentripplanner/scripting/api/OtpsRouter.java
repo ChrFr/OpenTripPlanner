@@ -190,8 +190,9 @@ public class OtpsRouter {
 		        
 		        Set<String> uniqueModes = new HashSet<>();
 		        
-		        Date arrivalLastUsedTransit = null;
 		        for (Leg leg: itinerary.legs){
+		        	if(!leg.mode.equals("WALK"))
+		        		evaluation.arrivalLastUsedTransit = leg.endTime.getTime();
 		        	uniqueModes.add(leg.mode);
 		        }
 		        evaluation.modes = uniqueModes.toString();

@@ -409,6 +409,15 @@ public class OtpsResultSet{
 		return elevationLost;
 	}	
 	
+	public Date[] getArrivalLastUsedTransit(){
+		Date[] arrivalLastUsedTransit = new Date[size()];
+		for (int i = 0; i < size(); i++){
+			OtpsResult eval = evaluations[i];
+			arrivalLastUsedTransit[i] = (eval != null) ? eval.getArrivalLastUsedTransit(): null;
+		}
+		return arrivalLastUsedTransit;
+	}	
+	
 	public int size(){
 		return population.size();
 	}
