@@ -154,6 +154,7 @@ public class OtpsRouter {
 		        continue;
 
 			OtpsResult evaluation = new OtpsResult();
+			evaluation.individual = individual;
 			res.evaluations[i] = evaluation;
 		    evaluation.time = time;
 		    OtpsSample sample = new OtpsSample(individual.cachedSample);
@@ -191,8 +192,11 @@ public class OtpsRouter {
 		        Set<String> uniqueModes = new HashSet<>();
 		        
 		        for (Leg leg: itinerary.legs){
-		        	if(!leg.mode.equals("WALK"))
-		        		evaluation.arrivalLastUsedTransit = leg.endTime.getTime();
+		        	if(!leg.mode.equals("WALK") && !leg.mode.equals("CAR")){		        		
+		        		evaluation.arrivalTransit = leg.endTime.getTime();
+		        		if (evaluation.startTransit == null)
+		        			evaluation.startTransit = leg.startTime.getTime();
+		        	}
 		        	uniqueModes.add(leg.mode);
 		        }
 		        evaluation.modes = uniqueModes.toString();

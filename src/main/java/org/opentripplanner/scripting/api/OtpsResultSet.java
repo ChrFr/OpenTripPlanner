@@ -18,6 +18,7 @@ import org.opentripplanner.analyst.batch.Population;
 
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
@@ -48,16 +49,10 @@ public class OtpsResultSet{
 	private AggregationMode aggregationMode = AggregationMode.THRESHOLD_SUM_AGGREGATOR;
 	private AccumulationMode accumulationMode = AccumulationMode.THRESHOLD_ACCUMULATOR;
 	private OtpsIndividual source;
-	
-	private boolean evalItineraries;
-	private boolean[] skipIndividuals;
 
 	protected OtpsResultSet(OtpsPopulation population){
 		this.population = population;
 		evaluations = new OtpsResult[population.size()];
-		evalItineraries = false;
-		skipIndividuals = new boolean[population.size()];
-		// Arrays.fill(skipIndividuals, false);
 	}	
 	
 	private static ResultSet createBasicResultSet(OtpsPopulation population, double[] results){
@@ -83,70 +78,6 @@ public class OtpsResultSet{
 		}
 		resultSet = createBasicResultSet(population, results);
 	}
-		
-//	protected void evaluate(ShortestPathTree spt, SampleFactory sampleFactory){
-//		
-//		Graph sptGraph = spt.getOptions().getRoutingContext().graph;
-//		int i = -1;
-//		for (OtpsIndividual individual: population){
-//		    i++;
-//			evaluations[i] = null;
-//			if (skipIndividuals[i])
-//				continue;
-//			
-//			if (!individual.isSampleSet || individual.graph != sptGraph) {
-//				individual.cachedSample = sampleFactory.getSample(individual.lon, individual.lat);
-//		        // Note: sample can be null here
-//				individual.graph = sptGraph;
-//				individual.isSampleSet = true;
-//		    }		
-//			
-//		    if (individual.cachedSample == null)
-//		        continue;
-//		    
-//		    long time = individual.cachedSample.eval(spt);
-//		    if (time == Long.MAX_VALUE)
-//		        continue;
-//
-//			OtpsResult evaluation = new OtpsResult();
-//			evaluations[i] = evaluation;
-//		    evaluation.time = time;
-//		    OtpsSample sample = new OtpsSample(individual.cachedSample);
-//		    
-//		    evaluation.boardings = sample.evalBoardings(spt);
-//		    evaluation.walkDistance = sample.evalWalkDistance(spt);      
-//		    int timeToItinerary = (int) (sample.evalDistanceToItinerary(spt) / spt.getOptions().walkSpeed);   
-//		    
-//		    if(evalItineraries){
-//		        Itinerary itinerary = sample.evalItinerary(spt);
-//		       
-//		        boolean arriveby = spt.getOptions().arriveBy;
-//	    		Calendar c = Calendar.getInstance();
-//		        Date startTime = itinerary.startTime.getTime();	 
-//		        Date arrivalTime = itinerary.endTime.getTime();
-//		        if (arriveby){
-//		    		c.setTime(startTime);
-//		    		c.add(Calendar.SECOND, -timeToItinerary);
-//		        }
-//		        else {
-//		    		c.setTime(arrivalTime);
-//		    		c.add(Calendar.SECOND, timeToItinerary);
-//		        }
-//		        evaluation.startTime = startTime;
-//		        evaluation.arrivalTime = arrivalTime;
-//		        
-//		        evaluation.waitingTime = itinerary.waitingTime;
-//		        evaluation.elevationGained = itinerary.elevationGained;
-//		        evaluation.elevationLost = itinerary.elevationLost;
-//		        
-//		        Set<String> uniqueModes = new HashSet<>();
-//		        
-//		        for (Leg leg: itinerary.legs)
-//		        	uniqueModes.add(leg.mode);
-//		        evaluation.modes = uniqueModes.toString();
-//		    }
-//		}
-//    }
 
 	public OtpsIndividual getSource() {
 		return source;
@@ -212,13 +143,6 @@ public class OtpsResultSet{
 		mergedResultSet.setSource(source);
 		return mergedResultSet;
 	}
-	/*
-	public OtpsResultSet append(OtpsResultSet setToAppend){
-		OtpsResultSet newResultSet = new OtpsResultSet();
-		newResultSet.setResults(evaluatedIndividuals);
-		newResultSet.setSource(source);
-		return newResultSet;
-	}*/
 	
 	public void setAggregationMode(AggregationMode mode){
 		aggregationMode = mode;
@@ -263,31 +187,6 @@ public class OtpsResultSet{
 		return evaluations[i];
 	}
 	
-    /**
-     * @return The actual times, the trips to the indivduals started
-	 *
-     */
-	public Date[] getStartTimes() {
-		Date[] startTimes = new Date[size()];
-		for (int i = 0; i < size(); i++){
-			OtpsResult eval = evaluations[i];
-			startTimes[i] = (eval != null) ? eval.getStartTime(): null;
-		}
-		return startTimes;
-	}
-	
-    /**
-     * @return The actual times, the individuals were visited
-	 *
-     */
-	public Date[] getArrivalTimes() {
-		Date[] arrivalTimes = new Date[size()];
-		for (int i = 0; i < size(); i++){
-			OtpsResult eval = evaluations[i];
-			arrivalTimes[i] = (eval != null) ? eval.getArrivalTime(): null;
-		}
-		return arrivalTimes;
-	}
 
 	/**
      * @return the first start time out of all results
@@ -335,100 +234,14 @@ public class OtpsResultSet{
 		}
 		return times;
 	}	
-
-//    /**
-//     * @return most likely the travel times, respectively accumulated values
-//	 *
-//     */
-//	public double[] getResults(){
-//		return resultSet.results;
-//	}
-	
-	public Integer[] getBoardings(){
-		Integer[] boardings = new Integer[size()];
-		for (int i = 0; i < size(); i++){
-			OtpsResult eval = evaluations[i];
-			boardings[i] = (eval != null) ? eval.getBoardings(): null;
-		}
-		return boardings;
-	}
-
-	public Double[] getWalkDistances(){
-		Double[] walkDistances = new Double[size()];
-		for (int i = 0; i < size(); i++){
-			OtpsResult eval = evaluations[i];
-			walkDistances[i] = (eval != null) ? eval.getWalkDistance(): null;
-		}
-		return walkDistances;
-	}
-	
-	public String[] getStringData(String dataName){
-		// ToDo: handle null pointers in list
-		String[] data = new String[size()];
-		int i = 0;
-		for(OtpsIndividual individual: population){
-			data[i] = individual.getStringData(dataName);
-			i++;
-		}
-		return data;
-	}
-	
-	public String[] getTraverseModes(){
-		String[] modes = new String[size()];
-		for (int i = 0; i < size(); i++){
-			OtpsResult eval = evaluations[i];
-			modes[i] = (eval != null) ? eval.getModes(): null;
-		}
-		return modes;
-	}
-	
-	public Long[] getWaitingTimes(){
-		Long[] waitingTimes = new Long[size()];
-		for (int i = 0; i < size(); i++){
-			OtpsResult eval = evaluations[i];
-			waitingTimes[i] = (eval != null) ? eval.getWaitingTime(): null;
-		}
-		return waitingTimes;
-	}
-	
-	public Double[] getElevationGained(){
-		Double[] elevationGained = new Double[size()];
-		for (int i = 0; i < size(); i++){
-			OtpsResult eval = evaluations[i];
-			elevationGained[i] = (eval != null) ? eval.getElevationGained(): null;
-		}
-		return elevationGained;
-	}
-	
-	public Double[] getElevationLost(){
-		Double[] elevationLost = new Double[size()];
-		for (int i = 0; i < size(); i++){
-			OtpsResult eval = evaluations[i];
-			elevationLost[i] = (eval != null) ? eval.getElevationLost(): null;
-		}
-		return elevationLost;
-	}	
-	
-	public Date[] getArrivalLastUsedTransit(){
-		Date[] arrivalLastUsedTransit = new Date[size()];
-		for (int i = 0; i < size(); i++){
-			OtpsResult eval = evaluations[i];
-			arrivalLastUsedTransit[i] = (eval != null) ? eval.getArrivalLastUsedTransit(): null;
-		}
-		return arrivalLastUsedTransit;
-	}	
 	
 	public int size(){
 		return population.size();
 	}
-	
-	public void setEvalItineraries(boolean evalItineraries) {
-		this.evalItineraries = evalItineraries;
-	}
-
-	public void setSkipIndividuals(boolean[] skipIndividuals) {
-		this.skipIndividuals = skipIndividuals;
-	}
+    
+    public OtpsPopulation getPopulation(){
+    	return population;
+    }
 	
 	// updates this results with the results of given set (only valid routes, if given set contains invalid routes for certain individuals, keep existing result for those)
 	public void update(OtpsResultSet resultSet){
@@ -466,5 +279,31 @@ public class OtpsResultSet{
 				comparisons[i] = eval.getArrivalTime().compareTo(compareTime);			
 		}
 		return comparisons;
+	}
+	
+	/**
+	 * get an array of results only containing the results with the n best (=fastest) traveltimes 
+	 * @param n
+	 */
+	public OtpsResult[] getBestResults(int n){
+		OtpsResult[] bestResults = new OtpsResult[n];
+		OtpsResult[] clone = evaluations.clone();
+		Arrays.sort(clone, new Comparator<OtpsResult>(){
+			@Override
+			public int compare(OtpsResult arg0, OtpsResult arg1) {
+				if (arg0 == null && arg1 == null)
+					return 0;
+				if (arg0 == null) 
+					return 1;
+				if (arg1 == null) 
+					return -1;
+				return arg0.compareTo(arg1);
+			}			
+		});
+		
+		for(int i = 0; i < n; i++){
+			bestResults[i] = clone[i];
+		}
+		return bestResults;		
 	}
 }

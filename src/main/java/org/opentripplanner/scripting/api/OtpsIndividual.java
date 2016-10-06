@@ -155,4 +155,8 @@ public class OtpsIndividual {
     public String toString() {
         return "Individual" + getLocation().toString();
     }
+    
+    public String[] getDataFields(){
+    	return population.getDataFields();
+    }
 }

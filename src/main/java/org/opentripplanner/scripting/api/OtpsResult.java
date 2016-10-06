@@ -8,14 +8,15 @@ import java.util.Date;
  * @author Christoph Franke
  *
  */
-public class OtpsResult {
+public class OtpsResult implements Comparable<OtpsResult> {
 
     protected long time = Long.MAX_VALUE;
     protected int boardings = 255;
     protected double walkDistance = Double.MAX_VALUE;	    
     protected Date startTime = null;    
     protected Date arrivalTime = null;   
-    protected Date arrivalLastUsedTransit = null; 
+    protected Date arrivalTransit = null; 
+    protected Date startTransit = null; 
 	protected String modes = "unknown";
     protected Long waitingTime = null;
     protected Double elevationGained = null;
@@ -52,7 +53,15 @@ public class OtpsResult {
 	public Double getElevationLost() {
 		return elevationLost;
 	}   
-    public Date getArrivalLastUsedTransit() {
-		return arrivalLastUsedTransit;
+    public Date getArrivalTransit() {
+		return arrivalTransit;
 	}
+    public Date getStartTransit() {
+		return startTransit;
+	}
+	@Override
+	public int compareTo(OtpsResult arg0) {		
+		return (int) (time - arg0.time);
+	}
+    
 }
