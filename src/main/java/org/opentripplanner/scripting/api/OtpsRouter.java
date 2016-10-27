@@ -111,7 +111,7 @@ public class OtpsRouter {
     		OtpsSPT spt = getSpt(request); 
     		
     		if (spt != null){
-	    		OtpsResultSet res = evaluate(spt.spt, individuals, skipIndividuals, req.evalItineraries, req.cutoffTime);
+	    		OtpsResultSet res = evaluate(spt.spt, individuals, skipIndividuals, req.evalItineraries, req.maxTimeSec, req.cutoffTime);
 	    		res.setSource(root);
 	    		results[i] = res;
     		}
@@ -124,10 +124,10 @@ public class OtpsRouter {
     }
     
     private OtpsResultSet evaluate(ShortestPathTree spt, OtpsPopulation individuals, boolean[] skipIndividuals, boolean evalItineraries){
-    	return evaluate(spt, individuals, skipIndividuals, evalItineraries, null);
+    	return evaluate(spt, individuals, skipIndividuals, evalItineraries, null, null);    
     }
     
-    private OtpsResultSet evaluate(ShortestPathTree spt, OtpsPopulation individuals, boolean[] skipIndividuals, boolean evalItineraries, Date cutoffTime){
+    private OtpsResultSet evaluate(ShortestPathTree spt, OtpsPopulation individuals, boolean[] skipIndividuals, boolean evalItineraries, Long maxTime, Date cutoffTime){
 		OtpsResultSet res = new OtpsResultSet(individuals);
 		
 		Graph sptGraph = spt.getOptions().getRoutingContext().graph;
@@ -149,19 +149,21 @@ public class OtpsRouter {
 		    if (individual.cachedSample == null)
 		        continue;
 		    
+		    RoutingRequest req = spt.getOptions();
+		    
 		    long time = individual.cachedSample.eval(spt);
-		    if (time == Long.MAX_VALUE)
+		    if (time == Long.MAX_VALUE || (maxTime != null && time > maxTime))
 		        continue;
 
 			OtpsResult evaluation = new OtpsResult();
 			evaluation.individual = individual;
 			res.evaluations[i] = evaluation;
-		    evaluation.time = time;
+		    evaluation.time = time;		    
 		    OtpsSample sample = new OtpsSample(individual.cachedSample);
 		    
 		    evaluation.boardings = sample.evalBoardings(spt);
 		    evaluation.walkDistance = sample.evalWalkDistance(spt);      
-		    int timeToItinerary = (int) (sample.evalDistanceToItinerary(spt) / spt.getOptions().walkSpeed);   
+		    int timeToItinerary = (int) (sample.evalDistanceToItinerary(spt) / req.walkSpeed);   
 		    
 		    if(evalItineraries){
 		        Itinerary itinerary = sample.evalItinerary(spt);

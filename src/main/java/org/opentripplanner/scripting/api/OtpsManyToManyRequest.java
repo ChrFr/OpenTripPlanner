@@ -12,7 +12,7 @@ public class OtpsManyToManyRequest extends OtpsRoutingRequest {
 	protected boolean[] skipOrigins;
 	protected boolean[] skipDestinations;
 	protected Date cutoffTime = null;
-	private Long maxTimeSec = null;
+	protected Long maxTimeSec = null;
 	protected int logProgress = 0;
 
 	boolean evalItineraries = true;
