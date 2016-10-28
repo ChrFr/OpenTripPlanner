@@ -95,10 +95,6 @@ public class OtpsRoutingRequest {
         req.wheelchairAccessible = wheelchairAccessible;
     }
 
-    public void setClampInitialWait(long clampInitialWait) {
-        req.clampInitialWait = clampInitialWait;
-    }
-
     public void setOrigin(double lat, double lon) {
         req.from = new GenericLocation(lat, lon);
     }
@@ -117,5 +113,14 @@ public class OtpsRoutingRequest {
 
     public void setBannedRoutes(String routeSpecList) {
         req.bannedRoutes = RouteMatcher.parse(routeSpecList);
+    }
+
+    /** Whether the trip must be wheelchair accessible. */
+    public void setWheelChairAccessible(boolean wheelChairAccessible){
+    	req.wheelchairAccessible = wheelChairAccessible;
+    }
+    
+    public Date getDateTime(){
+    	return req.getDateTime();
     }
 }

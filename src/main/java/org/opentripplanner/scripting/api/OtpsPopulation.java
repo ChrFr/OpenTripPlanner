@@ -141,4 +141,12 @@ public class OtpsPopulation implements Iterable<OtpsIndividual> {
         reader.close();
         return ret;
     }
+    
+    public int size(){
+    	return individuals.size();
+    }
+
+    public String[] getDataFields(){
+    	return dataIndex.keySet().toArray(new String[dataIndex.size()]);
+    }
 }

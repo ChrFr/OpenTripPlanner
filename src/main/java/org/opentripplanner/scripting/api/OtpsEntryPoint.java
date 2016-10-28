@@ -115,6 +115,22 @@ public class OtpsEntryPoint {
         RoutingRequest rreq = new RoutingRequest();
         return new OtpsRoutingRequest(rreq);
     }
+    
+    /**
+     * @return A new plan request that can be used to plan route / shortest path tree on a router.
+     */
+    public OtpsBatchRequest createBatchRequest() {
+        RoutingRequest rreq = new RoutingRequest();
+        return new OtpsBatchRequest(rreq);
+    }    
+
+    /**
+     * @return A new plan request that can be used to plan route / shortest path tree on a router.
+     */
+    public OtpsBatchProcessor createBatchProcessor(OtpsRouter router) {
+        return new OtpsBatchProcessor(router);
+    }    
+    
 
     /**
      * @return A new empty population.

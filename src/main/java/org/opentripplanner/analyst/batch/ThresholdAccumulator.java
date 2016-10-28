@@ -28,7 +28,8 @@ public class ThresholdAccumulator implements Accumulator {
     
     @Override
     public void accumulate(double amount, ResultSet current, ResultSet accumulated) {
-        if (current.population != accumulated.population) {
+        if (current.population.size() != accumulated.population.size()) {
+            LOG.error("population mismatch.");
             return;
         }
         int n = accumulated.population.size();

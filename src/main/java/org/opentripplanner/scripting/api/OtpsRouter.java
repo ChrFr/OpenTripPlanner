@@ -12,7 +12,6 @@
  along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 package org.opentripplanner.scripting.api;
-
 import org.opentripplanner.routing.algorithm.AStar;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.error.VertexNotFoundException;
@@ -34,7 +33,7 @@ import org.opentripplanner.standalone.Router;
  */
 public class OtpsRouter {
 
-    private Router router;
+    protected Router router;
 
     public OtpsRouter(Router router) {
         this.router = router;
@@ -48,12 +47,15 @@ public class OtpsRouter {
      *         origin/destination).
      */
     public OtpsSPT plan(OtpsRoutingRequest req) {
+        RoutingRequest req2 = req.req.clone();
+        return getSpt(req2);
+    }
+
+    protected OtpsSPT getSpt(RoutingRequest req){
         try {
-            // TODO Is this correct?
-            RoutingRequest req2 = req.req.clone();
-            req2.setRoutingContext(router.graph);
+        	req.setRoutingContext(router.graph);
             // TODO verify that this is indeed the intended behavior.
-            ShortestPathTree spt = new AStar().getShortestPathTree(req2);
+            ShortestPathTree spt = new AStar().getShortestPathTree(req);
             return new OtpsSPT(spt, router.graph.getSampleFactory());
         } catch (VertexNotFoundException e) {
             // Can happen, not really an error
