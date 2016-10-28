@@ -48,9 +48,10 @@ public class OtpsResultSet{
 	
 	private AggregationMode aggregationMode = AggregationMode.THRESHOLD_SUM_AGGREGATOR;
 	private AccumulationMode accumulationMode = AccumulationMode.THRESHOLD_ACCUMULATOR;
-	private OtpsIndividual source;
+	private OtpsIndividual root;
 
-	protected OtpsResultSet(OtpsPopulation population){
+	protected OtpsResultSet(OtpsIndividual root, OtpsPopulation population){
+		this.root = root;
 		this.population = population;
 		evaluations = new OtpsResult[population.size()];
 	}	
@@ -79,12 +80,13 @@ public class OtpsResultSet{
 		resultSet = createBasicResultSet(population, results);
 	}
 
-	public OtpsIndividual getSource() {
-		return source;
-	}
-
-	public void setSource(OtpsIndividual source) {
-		this.source = source;
+	/**
+	 * 
+	 * @return the root of the evaluated route 
+	 *         if not arriveby it's the origin, else the destination 
+	 */
+	public OtpsIndividual getRoot() {
+		return root;
 	}
 
 	private void setInput(String inputField){
@@ -138,9 +140,8 @@ public class OtpsResultSet{
 				bestResult = this.evaluations[i];
 			bestResults[i] = bestResult;			
 		}
-		OtpsResultSet mergedResultSet = new OtpsResultSet(population);
+		OtpsResultSet mergedResultSet = new OtpsResultSet(root, population);
 		mergedResultSet.evaluations = bestResults;
-		mergedResultSet.setSource(source);
 		return mergedResultSet;
 	}
 	
@@ -158,7 +159,7 @@ public class OtpsResultSet{
 	
 	public void accumulate(OtpsResultSet accumulated, String inputField, Double[] params){ 
 		setTimesToResults();
-		double amount = source.getFloatData(inputField);
+		double amount = root.getFloatData(inputField);
 		OtpsAccumulate accumulator = new OtpsAccumulate(accumulationMode, params);           
         accumulator.computeAccumulate(this, accumulated, amount);
 	}

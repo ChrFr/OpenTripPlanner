@@ -5,7 +5,7 @@ import java.util.Date;
 
 import org.opentripplanner.routing.core.RoutingRequest;
 
-public class OtpsManyToManyRequest extends OtpsRoutingRequest {
+public class OtpsBatchRequest extends OtpsRoutingRequest {
 	
 	protected OtpsPopulation origins;
 	protected OtpsPopulation destinations;
@@ -14,10 +14,12 @@ public class OtpsManyToManyRequest extends OtpsRoutingRequest {
 	protected Date cutoffTime = null;
 	protected Long maxTimeSec = null;
 	protected int logProgress = 0;
+	protected int threads = 1;
 
 	boolean evalItineraries = true;
+	public Object maxTime;
 
-	protected OtpsManyToManyRequest(RoutingRequest req) {
+	protected OtpsBatchRequest(RoutingRequest req) {
 		super(req);
 		// TODO Auto-generated constructor stub
 	}
@@ -131,5 +133,9 @@ public class OtpsManyToManyRequest extends OtpsRoutingRequest {
     /** maximum allowed departure (if not arriveby) resp. arrival time (if arriveby) */
     public void setCutoffTime(long epochSec) {
         cutoffTime = new Date(epochSec * 1000L);
+    }
+    
+    public void setThreads(int threads){
+    	this.threads = threads;
     }
 }
