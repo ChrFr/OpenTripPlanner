@@ -728,7 +728,8 @@ public class Graph implements Serializable {
             Graph graph = (Graph) in.readObject();
             LOG.debug("Basic graph info read.");
             if (graph.graphVersionMismatch())
-                throw new RuntimeException("Graph version mismatch detected.");
+             //   throw new RuntimeException("Graph version mismatch detected.");
+            	LOG.warn("OTP version mismatches the version used to build the graph!");
             if (level == LoadLevel.BASIC)
                 return graph;
             // vertex edge lists are transient to avoid excessive recursion depth
