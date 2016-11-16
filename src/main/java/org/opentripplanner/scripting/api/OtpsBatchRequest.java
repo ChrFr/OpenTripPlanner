@@ -11,7 +11,6 @@ public class OtpsBatchRequest extends OtpsRoutingRequest {
 	protected OtpsPopulation destinations;
 	protected boolean[] skipOrigins;
 	protected boolean[] skipDestinations;
-	protected Date cutoffTime = null;
 	protected Long maxTimeSec = null;
 	protected int logProgress = 0;
 	protected int threads = 1;
@@ -122,17 +121,6 @@ public class OtpsBatchRequest extends OtpsRoutingRequest {
         cal.set(Calendar.MINUTE, min);
         cal.set(Calendar.SECOND, sec);
         cal.set(Calendar.MILLISECOND, 0);
-        cutoffTime = cal.getTime();
-    }
-
-    /** maximum allowed departure (if not arriveby) resp. arrival time (if arriveby) */
-    public void setCutoffTime(Date dateTime) {
-    	cutoffTime = dateTime;
-    }
-
-    /** maximum allowed departure (if not arriveby) resp. arrival time (if arriveby) */
-    public void setCutoffTime(long epochSec) {
-        cutoffTime = new Date(epochSec * 1000L);
     }
     
     public void setThreads(int threads){
