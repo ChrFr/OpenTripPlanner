@@ -13,6 +13,7 @@
 
 package org.opentripplanner.scripting.api;
 
+import org.opentripplanner.analyst.batch.ResultSet;
 import org.opentripplanner.analyst.batch.aggregator.Aggregator;
 import org.opentripplanner.analyst.batch.aggregator.DecayAggregator;
 import org.opentripplanner.analyst.batch.aggregator.ThresholdCumulativeAggregator;
@@ -27,8 +28,17 @@ import org.opentripplanner.analyst.batch.aggregator.WeightedAverageAggregator;
 public class OtpsAggregate {
 	
 	private Aggregator aggregator;
+	public static enum AggregationMode { THRESHOLD_SUM_AGGREGATOR, WEIGHTED_AVERAGE_AGGREGATOR, THRESHOLD_CUMMULATIVE_AGGREGATOR, DECAY_AGGREGATOR }
 	
-	protected OtpsAggregate(OtpsResultSet.AggregationMode mode, Double[] params){
+	public OtpsAggregate(int mode, Double[] params){
+		this(AggregationMode.values()[mode], params);
+	}
+
+	public OtpsAggregate(String mode, Double[] params){
+		this(AggregationMode.valueOf(mode), params);
+	}
+	
+	public OtpsAggregate(AggregationMode mode, Double[] params){
 		switch(mode){
 			case THRESHOLD_SUM_AGGREGATOR:
 				aggregator = new ThresholdSumAggregator();
@@ -53,20 +63,17 @@ public class OtpsAggregate {
 				break;
 		}
 	}
-		
-	protected OtpsAggregate(OtpsResultSet.AggregationMode mode){
-		this(mode, null);
-	}
 	
 	protected OtpsAggregate(Aggregator aggregator){
 		this.aggregator = aggregator;
-	}
+	}	
 	
-	protected double computeAggregate(OtpsResultSet resultSet){
+	public double aggregate(OtpsResultSet resultSet, String inputField){
 		if(aggregator == null)
 			throw new IllegalStateException();
-		if(resultSet.resultSet.population.size() == 0)
+		if(resultSet.population.size() == 0)
 			return 0;
-		return aggregator.computeAggregate(resultSet.resultSet);
-	}
+		ResultSet res = resultSet.createResultSet(inputField);
+		return aggregator.computeAggregate(res);
+	}	
 }

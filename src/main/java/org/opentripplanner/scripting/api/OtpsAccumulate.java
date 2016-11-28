@@ -15,6 +15,7 @@ package org.opentripplanner.scripting.api;
 
 import org.opentripplanner.analyst.batch.Accumulator;
 import org.opentripplanner.analyst.batch.DecayAccumulator;
+import org.opentripplanner.analyst.batch.ResultSet;
 import org.opentripplanner.analyst.batch.ThresholdAccumulator;
 
 /**
@@ -25,8 +26,19 @@ import org.opentripplanner.analyst.batch.ThresholdAccumulator;
 public class OtpsAccumulate {
 	
 	private Accumulator accumulator;
+	private ResultSet accumulated;
 	
-	public OtpsAccumulate(OtpsResultSet.AccumulationMode mode, Double[] params){
+	public static enum AccumulationMode { DECAY_ACCUMULATOR, THRESHOLD_ACCUMULATOR }
+
+	public OtpsAccumulate(int mode, Double[] params){
+		this(AccumulationMode.values()[mode], params);
+	}
+
+	public OtpsAccumulate(String mode, Double[] params){
+		this(AccumulationMode.valueOf(mode), params);
+	}
+	
+	public OtpsAccumulate(AccumulationMode mode, Double[] params){
 		switch(mode){
 			case DECAY_ACCUMULATOR:
 				if(params == null || params.length == 0)
@@ -38,14 +50,22 @@ public class OtpsAccumulate {
 			case THRESHOLD_ACCUMULATOR:
 				accumulator = new ThresholdAccumulator();
 				if(params != null && params.length > 0)
-					((ThresholdAccumulator)accumulator).thresholdSeconds = params[0].intValue();
+					((ThresholdAccumulator)accumulator).setThresholdMinutes(params[0].intValue());
 				break;
 		}
 	}
 	
-	public void computeAccumulate(OtpsResultSet current, OtpsResultSet accumulated, double amount){
+	public void accumulate(OtpsResultSet current, double amount){
+		if (accumulated == null){			
+			accumulated = OtpsResultSet.createEmptyResultSet(current.population);
+		}
+		ResultSet res = current.createResultSet();
 		if(accumulator == null)
 			throw new IllegalStateException("Accumulation-mode has not been set.");
-		accumulator.accumulate(amount, current.resultSet, accumulated.resultSet);
+		accumulator.accumulate(amount, res, accumulated);
+	}
+	
+	public double[] getResults(){
+		return accumulated.results;
 	}
 }

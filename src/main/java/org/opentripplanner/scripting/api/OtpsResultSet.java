@@ -17,20 +17,12 @@ import org.opentripplanner.analyst.batch.Individual;
 import org.opentripplanner.analyst.batch.Population;
 
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.Iterator;
 
 import org.opentripplanner.analyst.batch.BasicPopulation;
 import org.opentripplanner.analyst.batch.ResultSet;
-import org.opentripplanner.analyst.request.SampleFactory;
-import org.opentripplanner.api.model.Itinerary;
-import org.opentripplanner.api.model.Leg;
-import org.opentripplanner.routing.graph.Graph;
-import org.opentripplanner.routing.spt.ShortestPathTree;
 
 /**
  * A set of results, used for wrapping results for aggregations/accumulations
@@ -38,16 +30,10 @@ import org.opentripplanner.routing.spt.ShortestPathTree;
  * @author Christoph Franke
  */
 public class OtpsResultSet{		
-
-	protected ResultSet resultSet = null;
-	public static enum AggregationMode { THRESHOLD_SUM_AGGREGATOR, WEIGHTED_AVERAGE_AGGREGATOR, THRESHOLD_CUMMULATIVE_AGGREGATOR, DECAY_AGGREGATOR }
-	public static enum AccumulationMode { DECAY_ACCUMULATOR, THRESHOLD_ACCUMULATOR }
 	
 	protected OtpsPopulation population;
 	protected OtpsResult[] evaluations;
 	
-	private AggregationMode aggregationMode = AggregationMode.THRESHOLD_SUM_AGGREGATOR;
-	private AccumulationMode accumulationMode = AccumulationMode.THRESHOLD_ACCUMULATOR;
 	private OtpsIndividual root;
 
 	protected OtpsResultSet(OtpsIndividual root, OtpsPopulation population){
@@ -56,29 +42,41 @@ public class OtpsResultSet{
 		evaluations = new OtpsResult[population.size()];
 	}	
 	
-	private static ResultSet createBasicResultSet(OtpsPopulation population, double[] results){
+	protected static ResultSet createEmptyResultSet(OtpsPopulation population){
 		Population basicPop = new BasicPopulation();
-		for(OtpsIndividual individual: population){
+		double[] results = new double[population.size()];
+		for(OtpsIndividual individual: population){			
 			OtpsLatLon pos = individual.getLocation();	
 			Individual ind = new Individual("", pos.getLon(), pos.getLat(), 0);
-			basicPop.addIndividual(ind);
-		}
+			basicPop.addIndividual(ind);	
+		}	
 		basicPop.setup(); // doesn't do anything useful, but needed to init basicPop.skip[] with False		
 		return new ResultSet(basicPop, results);
+	}
+	
+	protected ResultSet createResultSet(){
+		return createResultSet(null);
 	}	
 	
-	// before aggregating or accumulating the results have to be set in the native ResultSet
-	// Acc./Agg. work with this values
-	private void setTimesToResults(){
-		double[] results = new double[evaluations.length];
-		for (int i = 0; i < evaluations.length; i++){
+	protected ResultSet createResultSet(String inputField){
+		ResultSet resultSet = createEmptyResultSet(population);
+		int i = 0;
+		Iterator<Individual> indIterator = resultSet.population.iterator();		
+		for(OtpsIndividual individual: population){
 			OtpsResult eval = evaluations[i];	
 			// -1 is treated as invalid route by aggregators and accumulators
 			double result = (eval != null && eval.time < Long.MAX_VALUE) ? eval.time : -1; 
-			results[i] = result;
-		}
-		resultSet = createBasicResultSet(population, results);
-	}
+			resultSet.results[i] = result;
+			
+			if (inputField != null){
+				Double input = individual.getFloatData(inputField);	
+				Individual ind = indIterator.next();
+				ind.input = input;		
+			}
+			i++;
+		}	
+		return resultSet;
+	}	
 
 	/**
 	 * 
@@ -89,33 +87,6 @@ public class OtpsResultSet{
 		return root;
 	}
 
-	private void setInput(String inputField){
-		Double[] inputs = new Double[population.size()];
-		int i = 0;	
-		for(OtpsIndividual individual: population){
-			Double input = individual.getFloatData(inputField);	
-			inputs[i] = input;
-			i++;
-			if (input == null)
-				throw new IllegalArgumentException("Field " + inputField + " not found");
-		}	
-		i = 0;	
-		for(Individual individual: resultSet.population){
-			individual.input = inputs[i];
-			i++;
-		}
-	}
-	
-	public double aggregate(String inputField, Double[] params){
-		setTimesToResults();
-		setInput(inputField);
-        OtpsAggregate aggregator = new OtpsAggregate(aggregationMode, params);           
-        return aggregator.computeAggregate(this);  
-	}
-	
-	public double aggregate(String inputField){     
-        return aggregate(inputField, null);  
-	}
 
     /**
      * merge this set with the given one, keeping the shortest trips (with smallest times)
@@ -144,42 +115,7 @@ public class OtpsResultSet{
 		mergedResultSet.evaluations = bestResults;
 		return mergedResultSet;
 	}
-	
-	public void setAggregationMode(AggregationMode mode){
-		aggregationMode = mode;
-	}
-	
-	public void setAggregationMode(String mode){
-		setAggregationMode(AggregationMode.valueOf(mode));
-	}
 
-	public void setAggregationMode(int mode){
-		setAggregationMode(AggregationMode.values()[mode]);
-	}
-	
-	public void accumulate(OtpsResultSet accumulated, String inputField, Double[] params){ 
-		setTimesToResults();
-		double amount = root.getFloatData(inputField);
-		OtpsAccumulate accumulator = new OtpsAccumulate(accumulationMode, params);           
-        accumulator.computeAccumulate(this, accumulated, amount);
-	}
-	
-	public void accumulate(OtpsResultSet accumulated, String inputField){    
-        accumulate(accumulated, inputField, null);  
-	}
-	
-	public void setAccumulationMode(AccumulationMode mode){
-		accumulationMode = mode;
-	}
-	
-	public void setAccumulationMode(String mode){
-		setAccumulationMode(AccumulationMode.valueOf(mode));
-	}
-
-	public void setAccumulationMode(int mode){
-		setAccumulationMode(AccumulationMode.values()[mode]);
-	}
-	
 	public OtpsResult[] getResults(){
 		return evaluations;
 	}	
