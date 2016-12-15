@@ -43,11 +43,11 @@ public class OtpsSample extends Sample {
 	}
 	
     /**
-     * 
+     * @param spt Tree of shortest paths
      * @return the index (0, 1) of the vertex( incl. walkingDistance) 
      * with the shortest path (by time)
      */
-	private int bestIndex(ShortestPathTree spt){
+	private int bestIndex(final ShortestPathTree spt){
         State s0 = spt.getState(v0);
         State s1 = spt.getState(v1);
         long m0 = Long.MAX_VALUE;
@@ -62,10 +62,12 @@ public class OtpsSample extends Sample {
 
     /**
      * evaluates both vertices of this sample in the given shortest path tree
-     * with the given Evaluation and returns the smaller value of the two resulting ones
+     * and returns the smaller value of the two resulting ones
      * 
      * already contains the time needed to reach start point of shortest path on foot
      * 
+     * @param spt Tree of shortest paths
+     * @return shortest travel-time to vertex
      */
 	public long eval(final ShortestPathTree spt){
 		int idx = bestIndex(spt); 
@@ -95,6 +97,7 @@ public class OtpsSample extends Sample {
      * evaluates the itinerary of the shortest path
      * doesn't take account of time needed to reach itinerary
      * 
+     * @param spt Tree of shortest paths
      */
 	protected Itinerary evalItinerary(final ShortestPathTree spt){
 		int idx = bestIndex(spt); 

@@ -17,10 +17,24 @@ import org.opentripplanner.api.model.Itinerary;
 import org.opentripplanner.api.model.Leg;
 import org.opentripplanner.common.model.GenericLocation;
 import org.opentripplanner.routing.core.RoutingRequest;
-import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.spt.ShortestPathTree;
 import org.opentripplanner.standalone.Router;
 
+/**
+ *  
+ * Batch-Processor for multithreaded evaluation of OtpsBatchRequests 
+ *  
+ * Example of code (python script):
+ * <pre>
+ *   # create a batch-processor
+ *   batch_processor = self.otp.createBatchProcessor(router)
+ *   # evaluate a batch-request with this batch-processor
+ *   results = self.batch_processor.evaluate(batch_request)
+ * </pre>
+ * 
+ * @author Christoph Franke
+ *
+ */
 public class OtpsBatchProcessor {
 	
 	private OtpsPopulation roots;
@@ -30,15 +44,19 @@ public class OtpsBatchProcessor {
 	private OtpsRouter router;
 	private static final Logger LOG = (Logger) LoggerFactory.getLogger(Router.class);
 	
-    public OtpsBatchProcessor(OtpsRouter router) {
-    	
+	
+    public OtpsBatchProcessor(OtpsRouter router) {    	
     	this.router = router;
-    	//boolean[] skipRoots = request.req.arriveBy? request.skipDestinations: request.skipOrigins;
-    	
-    	//OtpsPopulation individuals = request.req.arriveBy? request.origins: request.destinations;
-    	//boolean[] skipIndividuals = request.req.arriveBy? request.skipOrigins: request.skipDestinations;
     }
     
+    /**
+     * evaluate the routes between origins and destinations as given by request
+     * 
+     * @param request The routing request
+     * @return A list of result-sets, one result-set per origin (if not arriveby) 
+     *         respectively destination (if arriveby), result-sets ordered as appearance 
+     *         of origins/destinations in request
+     */
     public OtpsResultSet[] evaluate(OtpsBatchRequest request){
     	
     	this.request = request;
@@ -74,7 +92,6 @@ public class OtpsBatchProcessor {
     	int nTasks = 0;
     	for (OtpsIndividual root: roots){
             ecs.submit(new EvaluationTask(nTasks, root), null);
-    		//new EvaluationTask(nTasks, root).run();
             nTasks++;
         }
 
@@ -94,7 +111,7 @@ public class OtpsBatchProcessor {
                 nCompleted++;
             }
         } catch (InterruptedException e) {
-            //LOG.warn("run was interrupted after {} tasks", nCompleted);
+            LOG.warn("run was interrupted after {} tasks", nCompleted);
         }
         threadPool.shutdown();
         LOG.info("A total of {} {} processed", nCompleted, rootString);	
@@ -121,7 +138,8 @@ public class OtpsBatchProcessor {
 				req.to = rootLocation;
 			else
 				req.from = rootLocation;
-
+			
+			//TODO: synchronize this block? getting spt may add duplicate vertices
     		OtpsSPT spt = router.getSpt(req); 
 			
 			if (spt != null){
@@ -134,7 +152,6 @@ public class OtpsBatchProcessor {
     private OtpsResultSet evaluate(ShortestPathTree spt, OtpsIndividual root){
 		OtpsResultSet res = new OtpsResultSet(root, individuals);
 		
-		Graph sptGraph = spt.getOptions().getRoutingContext().graph;
 		int i = -1;
 		for (OtpsIndividual individual: individuals){
 			i++; // increment first, because some individuals may be skipped, if not reachable in time 

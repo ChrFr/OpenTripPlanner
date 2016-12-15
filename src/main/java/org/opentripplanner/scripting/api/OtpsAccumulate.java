@@ -19,7 +19,13 @@ import org.opentripplanner.analyst.batch.ResultSet;
 import org.opentripplanner.analyst.batch.ThresholdAccumulator;
 
 /**
- * class for accumulating resultSets
+ * class for accumulating result-sets
+ * 
+ * Example of code (python script):
+ * <pre>
+ *   # Create an accumulator
+ *   accumulator = OtpsAccumulate(accumulation_mode, params)
+ * </pre>
  * 
  * @author Christoph Franke
  */

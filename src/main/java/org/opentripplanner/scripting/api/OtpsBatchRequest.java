@@ -1,6 +1,5 @@
 package org.opentripplanner.scripting.api;
 
-import java.util.Calendar;
 import java.util.Date;
 
 import org.opentripplanner.routing.core.RoutingRequest;
@@ -20,11 +19,6 @@ public class OtpsBatchRequest extends OtpsRoutingRequest {
 
 	protected OtpsBatchRequest(RoutingRequest req) {
 		super(req);
-		// TODO Auto-generated constructor stub
-	}
-	
-	public void reset(){
-		
 	}
 	
 	/** every nth single routing step will be logged, 0 means no logging of progress */
@@ -50,15 +44,23 @@ public class OtpsBatchRequest extends OtpsRoutingRequest {
     	req.maxTransfers = transfers;
     }
 
+    /** 
+     * The maximum wait time in seconds the user is willing to delay trip start. 
+     * Is subtracted from the elapsed time of the route, up to a clamp value specified in the request.
+     * If the clamp value is set to -1 (default), no clamping will occur.
+     * If the clamp value is set to 0, the initial wait time will not be subtracted out 
+     */
     public void setClampInitialWait(long clampInitialWait) {
         req.clampInitialWait = clampInitialWait;
     }
-    
+
+    /** the origin points of the routes */
     public void setOrigins(OtpsPopulation origins){
     	this.origins = origins;
     	skipOrigins = new boolean[origins.size()];
     }
-    
+
+    /** the destination points of the routes */
     public void setDestinations(OtpsPopulation destinations){
     	this.destinations = destinations;
     	skipDestinations = new boolean[destinations.size()];
@@ -110,19 +112,7 @@ public class OtpsBatchRequest extends OtpsRoutingRequest {
     public void setEvalItineraries(boolean evalItineraries) {
     	this.evalItineraries = evalItineraries;
     }
-    
-    /** maximum allowed departure (if not arriveby) resp. arrival time (if arriveby) */
-    public void setCutoffTime(int year, int month, int day, int hour, int min, int sec) {
-        Calendar cal = Calendar.getInstance(); // Use default timezone
-        cal.set(Calendar.YEAR, year);
-        cal.set(Calendar.MONTH, month - 1);
-        cal.set(Calendar.DAY_OF_MONTH, day);
-        cal.set(Calendar.HOUR_OF_DAY, hour);
-        cal.set(Calendar.MINUTE, min);
-        cal.set(Calendar.SECOND, sec);
-        cal.set(Calendar.MILLISECOND, 0);
-    }
-    
+        
     public void setThreads(int threads){
     	this.threads = threads;
     }

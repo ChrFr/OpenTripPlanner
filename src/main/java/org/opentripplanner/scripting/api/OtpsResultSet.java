@@ -25,7 +25,10 @@ import org.opentripplanner.analyst.batch.BasicPopulation;
 import org.opentripplanner.analyst.batch.ResultSet;
 
 /**
- * A set of results, used for wrapping results for aggregations/accumulations
+ * A set of results, holds and manages multiple results from root (origin if not arriveby, else destination)
+ * to all individuals of a population (destinations if not arriveby, else origins)
+ * maybe used to merge or update result-sets with same populations and 
+ * for aggregation/accumulation
  * 
  * @author Christoph Franke
  */
@@ -171,16 +174,31 @@ public class OtpsResultSet{
 		}
 		return times;
 	}	
-	
+
+    /**
+     * @return number of stored results
+	 *
+     */
 	public int size(){
 		return population.size();
 	}
-    
+
+    /**
+     * @return the destinations if not arriveby, else the origins
+	 *
+     */
     public OtpsPopulation getPopulation(){
     	return population;
     }
 	
-	// updates this results with the results of given set (only valid routes, if given set contains invalid routes for certain individuals, keep existing result for those)
+    /**
+     * 
+     * updates this results with the results of given set (only valid routes, 
+     * if given set contains invalid routes for certain individuals, keep existing 
+     * result for those)
+     * 
+     * @param resultSet Results that shall update the existing ones
+     */
 	public void update(OtpsResultSet resultSet){
 		if (resultSet.population != population)
 			throw new IllegalArgumentException("The sets are not based on the same population!");
@@ -190,8 +208,15 @@ public class OtpsResultSet{
 		}
 	}
 	
-	//the value 0 if the argument Date is equal to this Date; a value less than 0 if this Date is before the Date argument; and a value greater than 0 if this Date is after the Date argument.
-	//2 if this Date is Null (no route found)
+	/**
+	 * compares the starting times of all routes found with the given time
+	 * 
+	 * @param compareTime
+	 * @return List of Integers in order of results, 0 if the given Date is equal to the Date of the result; 
+	 *         a value less than 0 if this Date is before the given Date argument; 
+	 *         and a value greater than 0 if the Date is after the given Date;
+	 *         2 if the Date is Null (no route found)
+	 */
 	public int[] compareStartTime(Date compareTime){
 		int[] comparisons = new int[size()];
 		for (int i = 0; i < size(); i++){
@@ -203,9 +228,16 @@ public class OtpsResultSet{
 		}
 		return comparisons;
 	}
-	
-	//the value 0 if the argument Date is equal to this Date; a value less than 0 if this Date is before the Date argument; and a value greater than 0 if this Date is after the Date argument.
-	//2 if this Date is Null (no route found)
+
+	/**
+	 * compares the arrival times of all routes found with the given time
+	 * 
+	 * @param compareTime
+	 * @return List of Integers in order of results, 0 if the given Date is equal to the Date of the result; 
+	 *         a value less than 0 if this Date is before the given Date argument; 
+	 *         and a value greater than 0 if the Date is after the given Date;
+	 *         2 if the Date is Null (no route found)
+	 */
 	public int[] compareArrivalTime(Date compareTime){
 		int[] comparisons = new int[size()];
 		for (int i = 0; i < size(); i++){
@@ -220,7 +252,9 @@ public class OtpsResultSet{
 	
 	/**
 	 * get an array of results only containing the results with the n best (=fastest) traveltimes 
-	 * @param n
+	 * 
+	 * @param n Number of best results
+	 * @return List of n best results
 	 */
 	public OtpsResult[] getBestResults(int n){
 		OtpsResult[] bestResults = new OtpsResult[n];
