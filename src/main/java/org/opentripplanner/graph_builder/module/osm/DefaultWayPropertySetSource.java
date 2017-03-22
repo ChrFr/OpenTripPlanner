@@ -282,6 +282,8 @@ public class DefaultWayPropertySetSource implements WayPropertySetSource {
                 StreetTraversalPermission.PEDESTRIAN_AND_BICYCLE, 1.0, 1.4);
         setProperties(props, "highway=service;cycleway=opposite", StreetTraversalPermission.ALL,
                 1.1, 1.1);
+        setProperties(props, "highway=unclassified;cycleway=opposite",
+                StreetTraversalPermission.ALL, 0.98, 0.98);
         setProperties(props, "highway=residential;cycleway=opposite",
                 StreetTraversalPermission.ALL, 0.98, 0.98);
         setProperties(props, "highway=residential_link;cycleway=opposite",
