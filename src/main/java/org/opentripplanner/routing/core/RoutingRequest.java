@@ -76,7 +76,10 @@ public class RoutingRequest implements Cloneable, Serializable {
     public GenericLocation from;
 
     /** The end location */
-    public GenericLocation to;
+    public GenericLocation to;    
+
+    /** The radius to search for a vertex next to the origin/destination*/
+    public Double searchRadiusM;
 
     /** An ordered list of intermediate locations to be visited. */
     public List<GenericLocation> intermediatePlaces;

@@ -53,6 +53,10 @@ public class SampleFactory implements SampleSource {
         this.searchRadiusM = radiusMeters;
         this.searchRadiusLat = SphericalDistanceLibrary.metersToDegrees(searchRadiusM);
     }
+    
+    public double getSearchRadiusM() {
+    	return this.searchRadiusM;
+    }
 
     @Override
     /** implements SampleSource interface */

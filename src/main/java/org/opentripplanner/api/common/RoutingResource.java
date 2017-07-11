@@ -68,7 +68,11 @@ public abstract class RoutingResource {
 
     /** The end location (see fromPlace for format). */
     @QueryParam("toPlace")
-    protected String toPlace;
+    protected String toPlace;    
+
+    /** The radius to search for a vertex next to the origin/destination*/
+    @QueryParam("searchRadiusM")
+    protected Double searchRadiusM;
 
     /** An ordered list of intermediate locations to be visited (see the fromPlace for format). Parameter can be specified multiple times. */
     @QueryParam("intermediatePlaces")
@@ -397,7 +401,10 @@ public abstract class RoutingResource {
             } else {
                 request.setDateTime(date, time, tz);
             }
-        }
+        }        
+
+        if (searchRadiusM != null)
+            request.searchRadiusM = searchRadiusM;
 
         if (wheelchair != null)
             request.setWheelchairAccessible(wheelchair);

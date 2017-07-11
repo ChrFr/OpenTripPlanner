@@ -20,6 +20,7 @@ import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.model.Stop;
 import org.onebusaway.gtfs.model.calendar.ServiceDate;
 import org.onebusaway.gtfs.services.calendar.CalendarService;
+import org.opentripplanner.analyst.request.SampleFactory;
 import org.opentripplanner.api.resource.DebugOutput;
 import org.opentripplanner.common.geometry.GeometryUtils;
 import org.opentripplanner.routing.algorithm.strategies.EuclideanRemainingWeightHeuristic;
@@ -247,6 +248,13 @@ public class RoutingContext implements Cloneable {
         Edge toBackEdge = null;
         if (findPlaces) {
             if (opt.batch) {
+            	// workaround for setting a searchradius for the initial vertex if requested
+        		SampleFactory sfac = graph.getSampleFactory();
+        		double radiusMeters = sfac.getSearchRadiusM();
+            	if (opt.searchRadiusM != null){
+                	sfac.setSearchRadiusM(opt.searchRadiusM);
+            	}
+            	
                 // batch mode: find an OSM vertex, don't split
                 // We do this so that we are always linking to the same thing in analyst mode
                 // even if the transit network has changed.
@@ -260,6 +268,9 @@ public class RoutingContext implements Cloneable {
                     fromVertex = graph.streetIndex.getSampleVertexAt(opt.from.getCoordinate(), false);
                     toVertex = null;
                 }
+                
+                // reset the search radius
+                sfac.setSearchRadiusM(radiusMeters);
             }
 
             else {
