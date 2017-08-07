@@ -23,6 +23,7 @@ import org.opentripplanner.api.parameter.MIMEImageFormat;
 import org.opentripplanner.api.parameter.Style;
 import org.opentripplanner.common.geometry.DelaunayIsolineBuilder;
 import org.opentripplanner.routing.algorithm.EarliestArrivalSearch;
+import org.opentripplanner.routing.core.ConstantIntersectionTraversalCostModel;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.spt.ShortestPathTree;
 import org.opentripplanner.standalone.Router;
@@ -62,9 +63,10 @@ public class SurfaceResource extends RoutingResource {
     UriInfo uriInfo;
 
     @POST
-    public Response createSurface(@QueryParam("cutoffMinutes") 
-    @DefaultValue("90") int cutoffMinutes,
-    @QueryParam("routerId") String routerId) {
+    public Response createSurface(
+    		@QueryParam("cutoffMinutes") @DefaultValue("90") int cutoffMinutes,
+    		@QueryParam("intersectCosts") @DefaultValue("true") Boolean intersectCosts,
+		    @QueryParam("routerId") String routerId) {
 
         // Build the request
         try {
@@ -76,6 +78,9 @@ public class SurfaceResource extends RoutingResource {
         	
             EarliestArrivalSearch sptService = new EarliestArrivalSearch();
             sptService.maxDuration = (60 * cutoffMinutes);
+            if (!intersectCosts) {
+            	req.traversalCostModel = new ConstantIntersectionTraversalCostModel(0);
+            }
             ShortestPathTree spt = sptService.getShortestPathTree(req);
             req.cleanup();
             if (spt != null) {
