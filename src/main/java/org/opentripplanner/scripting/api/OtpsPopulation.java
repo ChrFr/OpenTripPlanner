@@ -42,9 +42,9 @@ import com.csvreader.CsvReader;
  */
 public class OtpsPopulation implements Iterable<OtpsIndividual> {
 
-    private List<OtpsIndividual> individuals;
+    protected List<OtpsIndividual> individuals;
 
-    private Map<String, Integer> dataIndex;
+    protected Map<String, Integer> dataIndex;
 
     protected OtpsPopulation() {
         individuals = new ArrayList<>();
@@ -148,5 +148,12 @@ public class OtpsPopulation implements Iterable<OtpsIndividual> {
 
     public String[] getDataFields(){
     	return dataIndex.keySet().toArray(new String[dataIndex.size()]);
+    }
+    
+    public OtpsPopulation get_slice(int fromIndex, int toIndex){
+    	OtpsPopulation sliced = new OtpsPopulation();    	
+    	sliced.individuals = individuals.subList(fromIndex, toIndex);
+    	sliced.dataIndex = dataIndex;
+    	return sliced;
     }
 }

@@ -65,14 +65,16 @@ public class OtpsBatchRequest extends OtpsRoutingRequest {
     	this.destinations = destinations;
     	skipDestinations = new boolean[destinations.size()];
     }
-    
+    /*
     public void setSkipOrigins(boolean[] skipOrigins){
     	this.skipOrigins = skipOrigins;
     }
     
     public void setSkipDestinations(boolean[] skipDestinations){
     	this.skipDestinations = skipDestinations;
-    }
+    }*/
+    
+    //public void set
 
     @Override
     public void setMaxTimeSec(long maxTimeSec) {
