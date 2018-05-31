@@ -18,24 +18,43 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.onebusaway.gtfs.model.AgencyAndId;
+import org.onebusaway.gtfs.model.FareAttribute;
 import org.opentripplanner.common.model.P2;
 
 public class FareRuleSet implements Serializable {
 
     private static final long serialVersionUID = 7218355718876553028L;
 
+    private String agency = null;
     private Set<AgencyAndId> routes;
     private Set<P2<String>> originDestinations;
     private Set<String> contains;
+    private FareAttribute fareAttribute;
+    private Set<AgencyAndId> trips;
     
-    public FareRuleSet() {
+    public FareRuleSet(FareAttribute fareAttribute) {
+        this.fareAttribute = fareAttribute;
         routes = new HashSet<AgencyAndId>();
         originDestinations= new HashSet<P2<String>>();
         contains = new HashSet<String>();
+        trips = new HashSet<AgencyAndId>();
+    }
+
+    public void setAgency(String agency) {
+        // TODO With new GTFS lib, read value from fareAttribute directly?
+        this.agency = agency;
+    }
+    
+    public String getAgency() {
+    	return agency;
     }
 
     public void addOriginDestination(String origin, String destination) {
-        originDestinations.add(new P2<String>(origin, destination));        
+        originDestinations.add(new P2<String>(origin, destination));
+    }
+
+    public Set<P2<String>> getOriginDestinations() {
+        return originDestinations;
     }
 
     public void addContains(String containsId) {
@@ -45,9 +64,35 @@ public class FareRuleSet implements Serializable {
     public void addRoute(AgencyAndId route) {
         routes.add(route);
     }
+    
+    public Set<AgencyAndId> getRoutes() {
+    	return routes;
+    }
 
-    public boolean matches(String startZone, String endZone, Set<String> zonesVisited,
-            Set<AgencyAndId> routesVisited) {
+    public FareAttribute getFareAttribute() {
+        return fareAttribute;
+    }
+
+    public boolean hasAgencyDefined() {
+        return agency != null;
+    }
+
+    public void addTrip(AgencyAndId trip) {
+    	trips.add(trip);
+    }
+    
+    public Set<AgencyAndId> getTrips() {
+    	return trips;
+    }
+    
+    public boolean matches(Set<String> agencies, String startZone, String endZone, Set<String> zonesVisited,
+            Set<AgencyAndId> routesVisited, Set<AgencyAndId> tripsVisited) {
+        //check for matching agency
+        if (agency != null) {
+            if (agencies.size() != 1 || !agencies.contains(agency))
+                return false;
+        }
+
         //check for matching origin/destination, if this ruleset has any origin/destination restrictions
         if (originDestinations.size() > 0) {
             P2<String> od = new P2<String>(startZone, endZone);
@@ -74,6 +119,13 @@ public class FareRuleSet implements Serializable {
             if (!routes.containsAll(routesVisited)) {
                 return false;
             }
+        }
+        
+        //check for matching trips
+        if (trips.size() != 0) {
+        	if (!trips.containsAll(tripsVisited)) {
+        		return false;
+        	}
         }
 
         return true;

@@ -31,7 +31,6 @@ public enum StreetTraversalPermission {
     CAR(4),
     PEDESTRIAN_AND_CAR(4 | 1),
     BICYCLE_AND_CAR(4 | 2),
-    PEDESTRIAN_AND_BICYCLE_AND_CAR(4 | 2 | 1),
     ALL(4 | 2 | 1);
 
     private static final Map<Integer, StreetTraversalPermission> lookup = new HashMap<Integer, StreetTraversalPermission>();
@@ -53,6 +52,16 @@ public enum StreetTraversalPermission {
 
     public StreetTraversalPermission add(StreetTraversalPermission perm) {
         return get(this.code | perm.code);
+    }
+
+    /**
+     * Returns intersection of allowed permissions between current permissions and given permissions
+     *
+     * @param perm
+     * @return
+     */
+    public StreetTraversalPermission intersection(StreetTraversalPermission perm) {
+        return get(this.code & perm.code);
     }
 
     public StreetTraversalPermission remove(StreetTraversalPermission perm) {

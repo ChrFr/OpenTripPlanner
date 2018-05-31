@@ -13,17 +13,16 @@
 
 package org.opentripplanner.updater.alerts;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.opentripplanner.routing.alertpatch.Alert;
 import org.opentripplanner.routing.alertpatch.AlertPatch;
 import org.opentripplanner.routing.alertpatch.TimePeriod;
-import org.opentripplanner.routing.alertpatch.TranslatedString;
 import org.opentripplanner.routing.services.AlertPatchService;
+import org.opentripplanner.util.I18NString;
+import org.opentripplanner.util.TranslatedString;
+import org.opentripplanner.updater.GtfsRealtimeFuzzyTripMatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +31,7 @@ import com.google.transit.realtime.GtfsRealtime.EntitySelector;
 import com.google.transit.realtime.GtfsRealtime.FeedEntity;
 import com.google.transit.realtime.GtfsRealtime.FeedMessage;
 import com.google.transit.realtime.GtfsRealtime.TimeRange;
+import com.google.transit.realtime.GtfsRealtime.TripDescriptor;
 
 /**
  * This updater only includes GTFS-Realtime Service Alert feeds.
@@ -41,7 +41,7 @@ import com.google.transit.realtime.GtfsRealtime.TimeRange;
 public class AlertsUpdateHandler {
     private static final Logger log = LoggerFactory.getLogger(AlertsUpdateHandler.class);
 
-    private String defaultAgencyId;
+    private String feedId;
 
     private Set<String> patchIds = new HashSet<String>();
 
@@ -49,6 +49,9 @@ public class AlertsUpdateHandler {
 
     /** How long before the posted start of an event it should be displayed to users */
     private long earlyStart;
+
+    /** Set only if we should attempt to match the trip_id from other data in TripDescriptor */
+    private GtfsRealtimeFuzzyTripMatcher fuzzyTripMatcher;
 
     public void update(FeedMessage message) {
         alertPatchService.expire(patchIds);
@@ -72,6 +75,7 @@ public class AlertsUpdateHandler {
         ArrayList<TimePeriod> periods = new ArrayList<TimePeriod>();
         if(alert.getActivePeriodCount() > 0) {
             long bestStartTime = Long.MAX_VALUE;
+            long lastEndTime = Long.MIN_VALUE;
             for (TimeRange activePeriod : alert.getActivePeriodList()) {
                 final long realStart = activePeriod.hasStart() ? activePeriod.getStart() : 0;
                 final long start = activePeriod.hasStart() ? realStart - earlyStart : 0;
@@ -79,22 +83,40 @@ public class AlertsUpdateHandler {
                     bestStartTime = realStart;
                 }
                 final long end = activePeriod.hasEnd() ? activePeriod.getEnd() : Long.MAX_VALUE;
+                if (end > lastEndTime) {
+                    lastEndTime = end;
+                }
                 periods.add(new TimePeriod(start, end));
             }
             if (bestStartTime != Long.MAX_VALUE) {
                 alertText.effectiveStartDate = new Date(bestStartTime * 1000);
+            }
+            if (lastEndTime != Long.MIN_VALUE) {
+                alertText.effectiveEndDate = new Date(lastEndTime * 1000);
             }
         } else {
             // Per the GTFS-rt spec, if an alert has no TimeRanges, than it should always be shown.
             periods.add(new TimePeriod(0, Long.MAX_VALUE));
         }
         for (EntitySelector informed : alert.getInformedEntityList()) {
+            if (fuzzyTripMatcher != null && informed.hasTrip()) {
+                TripDescriptor trip = fuzzyTripMatcher.match(feedId, informed.getTrip());
+                informed = informed.toBuilder().setTrip(trip).build();
+            }
             String patchId = createId(id, informed);
 
             String routeId = null;
             if (informed.hasRouteId()) {
                 routeId = informed.getRouteId();
             }
+
+            int direction;
+            if (informed.hasTrip() && informed.getTrip().hasDirectionId()) {
+                direction = informed.getTrip().getDirectionId();
+            } else {
+                direction = -1;
+            }
+
             // TODO: The other elements of a TripDescriptor are ignored...
             String tripId = null;
             if (informed.hasTrip() && informed.getTrip().hasTripId()) {
@@ -108,26 +130,24 @@ public class AlertsUpdateHandler {
             String agencyId = informed.getAgencyId();
             if (informed.hasAgencyId()) {
                 agencyId = informed.getAgencyId().intern();
-            } else {
-                agencyId = defaultAgencyId;
-            }
-            if (agencyId == null) {
-                log.error("Empty agency id (and no default set) in feed; other ids are route "
-                        + routeId + " and stop " + stopId);
-                continue;
             }
 
             AlertPatch patch = new AlertPatch();
+            patch.setFeedId(feedId);
             if (routeId != null) {
-                patch.setRoute(new AgencyAndId(agencyId, routeId));
+                patch.setRoute(new AgencyAndId(feedId, routeId));
+                // Makes no sense to set direction if we don't have a route
+                if (direction != -1) {
+                    patch.setDirectionId(direction);
+                }
             }
             if (tripId != null) {
-                patch.setTrip(new AgencyAndId(agencyId, tripId));
+                patch.setTrip(new AgencyAndId(feedId, tripId));
             }
             if (stopId != null) {
-                patch.setStop(new AgencyAndId(agencyId, stopId));
+                patch.setStop(new AgencyAndId(feedId, stopId));
             }
-            if(agencyId != null && routeId == null && tripId == null && stopId == null) {
+            if (agencyId != null && routeId == null && tripId == null && stopId == null) {
                 patch.setAgencyId(agencyId);
             }
             patch.setTimePeriods(periods);
@@ -144,9 +164,12 @@ public class AlertsUpdateHandler {
         return id + " "
             + (informed.hasAgencyId  () ? informed.getAgencyId  () : " null ") + " "
             + (informed.hasRouteId   () ? informed.getRouteId   () : " null ") + " "
+            + (informed.hasTrip() && informed.getTrip().hasDirectionId() ?
+                informed.getTrip().hasDirectionId() : " null ") + " "
             + (informed.hasRouteType () ? informed.getRouteType () : " null ") + " "
             + (informed.hasStopId    () ? informed.getStopId    () : " null ") + " "
-            + (informed.hasTrip() ? informed.getTrip().getTripId() : " null ");
+            + (informed.hasTrip() && informed.getTrip().hasTripId() ?
+                informed.getTrip().getTripId() : " null ");
     }
 
     /**
@@ -154,19 +177,19 @@ public class AlertsUpdateHandler {
      *
      * @return A TranslatedString containing the same information as the input
      */
-    private TranslatedString deBuffer(GtfsRealtime.TranslatedString input) {
-        TranslatedString result = new TranslatedString();
+    private I18NString deBuffer(GtfsRealtime.TranslatedString input) {
+        Map<String, String> translations = new HashMap<>();
         for (GtfsRealtime.TranslatedString.Translation translation : input.getTranslationList()) {
             String language = translation.getLanguage();
             String string = translation.getText();
-            result.addTranslation(language, string);
+            translations.put(language, string);
         }
-        return result;
+        return translations.isEmpty() ? null : TranslatedString.getI18NString(translations);
     }
 
-    public void setDefaultAgencyId(String defaultAgencyId) {
-        if(defaultAgencyId != null)
-            this.defaultAgencyId = defaultAgencyId.intern();
+    public void setFeedId(String feedId) {
+        if(feedId != null)
+            this.feedId = feedId.intern();
     }
 
     public void setAlertPatchService(AlertPatchService alertPatchService) {
@@ -179,5 +202,9 @@ public class AlertsUpdateHandler {
 
     public void setEarlyStart(long earlyStart) {
         this.earlyStart = earlyStart;
+    }
+
+    public void setFuzzyTripMatcher(GtfsRealtimeFuzzyTripMatcher fuzzyTripMatcher) {
+        this.fuzzyTripMatcher = fuzzyTripMatcher;
     }
 }

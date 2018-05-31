@@ -8,11 +8,11 @@ Java development are [Eclipse](http://eclipse.org), [IntelliJ IDEA](https://www.
 and any IDE with Maven build support should also work (ensure that you have the Maven plugins installed and enabled).
 Git integration is a plus since OTP is under Git version control.
 
-IntelliJ IDEA is a commercial product, but its authors give free licenses to open source projects and the OpenTripPlanner
-development community has received such a license. If you want to use IntelliJ just ask us for the license key. It's
-an excellent IDE, and in my experience is quicker and more stable than the competition.
+Many of the Core OTP developers use IntelliJ IDEA. It is an excellent IDE, and in my experience is quicker 
+and more stable than the competition. IntelliJ IDEA is a commercial product, but there is an open source "community edition"
+that is completely sufficient for working on OTP.
 
-Rather than using the version control support in my IDE, I usually find it more straightforward to clone the OTP Github
+Rather than using the version control support in my IDE, I usually find it more straightforward to clone the OTP GitHub
 repository manually (on the command line or using some other Git interface tool), then import the resulting local OTP
 repository into my IDE as a Maven project. The IDE should then take care of fetching all the libraries OTP depends on,
 based on the Maven project description (POM file) in the base of the OTP repository. This step can take a long time because
@@ -20,7 +20,7 @@ it involves downloading a lot of JAR files.
 
 When running your local copy of the OTP source within an IDE, all command line switches and configuration options will
 be identical to the ones used when running the OTP JAR from the command line (as described in the
-[basic introduction](Basic-Usage) and [configuration reference](Configuration). The only difference is that you need to
+[basic introduction](Basic-Usage) and [configuration reference](Configuration)). The only difference is that you need to
 manually specify the main class. When you run a JAR from the command line, the JVM automatically knows which class
 contains the entry point into the program (the `main` function), but in IDEs you must create a "run configuration".
 
@@ -49,16 +49,16 @@ There are several ways to get involved:
 
 ### Issues and commits
 
-All commits should reference a specific issue number (this was formally decided decided in issue #175).
+All commits should reference a specific issue number (this was formally decided in issue #175).
 For example, `Simplify module X configuration #9999`.
 If no ticket exists for the feature or bug your code implements or fixes,
 you should [create a new ticket](http://github.com/openplans/OpenTripPlanner/issues/new) prior to checking in, or
 ideally even prior to your development work since this provides a place to carry out implementation discussions (in the comments).
 
-Github will automatically update issues when commits are merged in: if your commit message includes the text
+GitHub will automatically update issues when commits are merged in: if your commit message includes the text
 ` fixes #123 `, it will automatically append your message as a comment on the isse and close it.
 If you simply mention ` #123 ` in your message, your message will be appended to the issue but it will remain open.
-Many other expressions exist to close issues via commit messages. See [the Github help page on this topic](https://help.github.com/articles/closing-issues-via-commit-messages/).
+Many other expressions exist to close issues via commit messages. See [the GitHub help page on this topic](https://help.github.com/articles/closing-issues-via-commit-messages/).
 
 
 ### Code Comments
@@ -72,7 +72,7 @@ Javadoc or the empty Javadoc stubs added by IDEs, such as `@param` annotations w
 
 ### Documentation
 
-Most documentation should be included directly in the OpenTripPlanner repository rather than the Github wiki.
+Most documentation should be included directly in the OpenTripPlanner repository rather than the GitHub wiki.
 This allows version control to be applied to documentation as well as program source code.
 All pull requests that change how OTP is used or configured should include changes to the documentation alongside code
 modifications. Pages that help organize development teams or serve as scratchpads can still go
@@ -90,6 +90,39 @@ In short:
 ```
 $ pip install mkdocs
 $ mkdocs serve
+```
+
+### Debug layers
+
+Adding new renderer is very easy. You just need to create new class (preferably in
+`org.opentripplanner.inspector` package) which implements EdgeVertexRenderer. It is best if class
+name ends with Rendered. To implement this interface you need to write three functions `renderEdge`,
+`renderVertex` and `getName`. Both render functions accepts `EdgeVisualAttributes` object in which
+label of edge/vertex and color can be set. And both return `true` if edge/vertex should be rendered
+and `false` otherwise. `getName` function should return short descriptive name of the class and will
+be shown in layer chooser.
+
+For examples how to write renderers you can look into example renderers which are all in `org.opentripplanner.inspector` package.
+
+After your class is written you only need to add it to TileRenderManager:
+```java
+//This is how Wheelchair renderer is added
+renderers.put("wheelchair", new EdgeVertexTileRenderer(new WheelchairEdgeRenderer()));
+```
+`wheelchair` is internal layer key and should consist of a-zA-Z and -.
+
+By default all the tiles have cache headers to cache them for one hour. This can become problematic
+ if you are changing renderers a lot. To disable this change `GraphInspectorTileResource`:
+
+```java
+//This lines
+CacheControl cc = new CacheControl();
+cc.setMaxAge(3600);
+cc.setNoCache(false);
+
+//to this:
+CacheControl cc = new CacheControl();
+cc.setNoCache(true);
 ```
 
 
@@ -123,7 +156,7 @@ Deadline for response is 2015-10-29. Assuming I've heard no blocking votes by th
 Note that you should make sure to include a **deadline** by which you will go ahead and do what you're proposing 
 if you don't hear any blocking responses. In general, you should leave at least 72 hours for people to respond. 
 This is not a hard-and-fast rule and you should use your best judgement in determining how far in the future the 
-deadline should be depending on the magnitude of the proposal and how much it will effect the overall project and the 
+deadline should be depending on the magnitude of the proposal and how much it will affect the overall project and the 
 rest of the community.
 
 Of course you may always fork the [OTP repo on GitHub](https://github.com/opentripplanner/OpenTripPlanner/) 
@@ -136,7 +169,7 @@ are not included in mainline OTP.
 ### Java
 
 OpenTripPlanner uses the same code formatting and style as the [GeoTools](http://www.geotools.org/) and 
-[GeoServer](htp://geoserver.org) projects. It's a minor variant of the 
+[GeoServer](http://geoserver.org) projects. It's a minor variant of the
 [Sun coding convention](http://www.oracle.com/technetwork/java/codeconv-138413.html). Notably, **we do not use tabs** 
 for indentation and we allow for lines up to 100 characters wide.
 
@@ -189,8 +222,23 @@ As of #206, we follow [Crockford's JavaScript code conventions](http://javascrip
 
 ## Continuous Integration
 
-The OpenTripPlanner project has a [continuous integration (CI) server](http://ci.opentripplanner.org). Any time a change
-is pushed to the main OpenTripPlanner repository on GitHub, this server will compile and test the new code, providing
-feedback on the stability of the build. It is also configured to run a battery of speed tests so that we can track
-improvements due to optimizations and spot drops in performance as an unintended consequence of changes.
+The OpenTripPlanner project uses the [Travis CI continuous integration system](https://travis-ci.org/opentripplanner/OpenTripPlanner). Any time a change
+is pushed to the main OpenTripPlanner repository on GitHub, this server will compile and test the new code, providing feedback on the stability of the build.
 
+## Release Process
+
+This section is intended as a checklist for the person within the OTP development community who is responsible for performing releases (currently Andrew Byrd). This documentation is currently out of date because deployment to the Maven Central repository is now handled automatically, and all of our documentation resources are served up by AWS S3.
+
+Release checklist:
+
+- update docs/Changelog.md, check in changes, and push
+- check that you are on the master branch with no uncommitted changes (git status; git clean -df)
+- pull down the latest master code
+- verify that git push succeeds without prompting for a password (i.e. ~/.ssh/id_rsa.pub is known to Github)
+- run a test build: mvn clean package site
+- aws s3 cp -R target/site/apidocs ......./javadoc/x.y.0
+- aws s3 cp -R target/site/enunciate ......./apidoc/x.y.0
+- TODO insert list of steps to bump to a release version
+- check http://dev.opentripplanner.org/jars/ and http://dev.opentripplanner.org/javadoc/ in a browser
+- update any version numbers that appear in Basic-Usage, Developers-Guide, Getting-OTP, and index.md and check them in
+- email the OTP dev and users mailing lists, and send a message on Slack

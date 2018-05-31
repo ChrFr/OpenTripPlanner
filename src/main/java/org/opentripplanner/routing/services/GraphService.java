@@ -13,6 +13,14 @@
 
 package org.opentripplanner.routing.services;
 
+import org.geotools.referencing.factory.DeferredAuthorityFactory;
+import org.geotools.util.WeakCollectionCleaner;
+import org.opentripplanner.routing.error.GraphNotFoundException;
+import org.opentripplanner.standalone.Router;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -22,15 +30,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.annotation.PreDestroy;
-
-import org.geotools.referencing.factory.DeferredAuthorityFactory;
-import org.geotools.util.WeakCollectionCleaner;
-import org.opentripplanner.routing.error.GraphNotFoundException;
-import org.opentripplanner.standalone.Router;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A GraphService maps RouterIds to Graphs.
@@ -134,27 +133,43 @@ public class GraphService {
     }
 
     /**
-     * Reload all registered graphs from wherever they came from.
-     * 
-     * @param preEvict When true, release the existing graph (if any) before loading. This will
-     *        halve the amount of memory needed for the operation, but routing will be unavailable
-     *        for that graph during the load process
-     * @return whether the operation completed successfully
+     * Reload all registered graphs from wherever they came from. See reloadGraph().
+     * @return whether the operation completed successfully (all reloads are successful).
      */
-    public boolean reloadGraphs(boolean preEvict) {
+    public boolean reloadGraphs(boolean preEvict, boolean force) {
         boolean allSucceeded = true;
         synchronized (graphSources) {
             Collection<String> routerIds = getRouterIds();
             for (String routerId : routerIds) {
-                GraphSource graphSource = graphSources.get(routerId);
-                boolean success = graphSource.reload(true, preEvict);
-                if (!success) {
-                    evictRouter(routerId);
-                }
-                allSucceeded &= success;
+                allSucceeded &= reloadGraph(routerId, preEvict, force);
             }
         }
         return allSucceeded;
+    }
+
+    /**
+     * Reload a registered graph. If the reload fails, evict (remove) the graph.
+     * 
+     * @param routerId ID of the router
+     * @param preEvict When true, release the existing graph (if any) before loading. This will
+     *        halve the amount of memory needed for the operation, but routing will be unavailable
+     *        for that graph during the load process
+     * @param force When true, force a reload. If false, only check if the source has been modified,
+     *        and reload if so.
+     * @return True if the reload is successful, false otherwise.
+     */
+    public boolean reloadGraph(String routerId, boolean preEvict, boolean force) {
+        synchronized (graphSources) {
+            GraphSource graphSource = graphSources.get(routerId);
+            if (graphSource == null) {
+                return false;
+            }
+            boolean success = graphSource.reload(force, preEvict);
+            if (!success) {
+                evictRouter(routerId);
+            }
+            return success;
+        }
     }
 
     /** @return a collection of all valid router IDs for this server */

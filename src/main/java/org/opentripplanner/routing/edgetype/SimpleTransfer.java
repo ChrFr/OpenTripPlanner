@@ -22,6 +22,9 @@ import org.opentripplanner.routing.vertextype.TransitStop;
 
 import com.vividsolutions.jts.geom.LineString;
 
+import java.util.List;
+import java.util.Locale;
+
 /**
  * Represents a transfer between stops that does not take the street network into account.
  *
@@ -33,15 +36,32 @@ public class SimpleTransfer extends Edge {
     private double distance;
     
     private LineString geometry;
+    private List<Edge> edges;
 
-    public SimpleTransfer(TransitStop from, TransitStop to, double distance, LineString geometry) {
+    public SimpleTransfer(TransitStop from, TransitStop to, double distance, LineString geometry, List<Edge> edges) {
         super(from, to);
         this.distance = distance;
         this.geometry = geometry;
+        this.edges = edges;
+    }
+
+    public SimpleTransfer(TransitStop from, TransitStop to, double distance, LineString geometry) {
+        this(from, to, distance, geometry, null);
     }
 
     @Override
     public State traverse(State s0) {
+        // Forbid taking shortcuts composed of two transfers in a row
+        if (s0.backEdge instanceof SimpleTransfer) {
+            return null;
+        }
+        if (s0.backEdge instanceof StreetTransitLink) {
+            return null;
+        }
+        if(distance > s0.getOptions().maxTransferWalkDistance) {
+            return null;
+        }
+        // Only transfer right after riding a vehicle.
         RoutingRequest rr = s0.getOptions();
         double walkspeed = rr.walkSpeed;
         StateEditor se = s0.edit(this);
@@ -57,6 +77,12 @@ public class SimpleTransfer extends Edge {
     public String getName() {
         return fromv.getName() + " => " + tov.getName();
     }
+    
+    @Override
+    public String getName(Locale locale) {
+        //TODO: localize
+        return this.getName();
+    }
 
     @Override
     public double weightLowerBound(RoutingRequest rr) {
@@ -70,8 +96,15 @@ public class SimpleTransfer extends Edge {
     }
     
     
-   @Override
-   public LineString getGeometry(){
+    @Override
+    public LineString getGeometry(){
 	   return this.geometry;
    }
+
+    public List<Edge> getEdges() { return this.edges; }
+
+    @Override
+    public String toString() {
+        return "SimpleTransfer " + getName();
+    }
 }

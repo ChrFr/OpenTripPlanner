@@ -15,14 +15,10 @@ package org.opentripplanner.updater.stoptime;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.prefs.Preferences;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.opentripplanner.updater.JsonConfigurable;
+import org.opentripplanner.updater.*;
 import org.opentripplanner.routing.graph.Graph;
-import org.opentripplanner.updater.GraphUpdaterManager;
-import org.opentripplanner.updater.GraphWriterRunnable;
-import org.opentripplanner.updater.PollingGraphUpdater;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +34,7 @@ import com.google.transit.realtime.GtfsRealtime.TripUpdate;
  * rt.frequencySec = 60
  * rt.sourceType = gtfs-http
  * rt.url = http://host.tld/path
- * rt.defaultAgencyId = TA
+ * rt.feedId = TA
  * </pre>
  *
  */
@@ -71,9 +67,14 @@ public class PollingStoptimeUpdater extends PollingGraphUpdater {
     private Boolean purgeExpiredData;
 
     /**
-     * Default agency id that is used for the trip ids in the TripUpdates
+     * Feed id that is used for the trip ids in the TripUpdates
      */
-    private String agencyId;
+    private String feedId;
+
+    /**
+     * Set only if we should attempt to match the trip_id from other data in TripDescriptor
+     */
+    private GtfsRealtimeFuzzyTripMatcher fuzzyTripMatcher;
 
     @Override
     public void setGraphUpdaterManager(GraphUpdaterManager updaterManager) {
@@ -83,7 +84,7 @@ public class PollingStoptimeUpdater extends PollingGraphUpdater {
     @Override
     public void configurePolling(Graph graph, JsonNode config) throws Exception {
         // Create update streamer from preferences
-        agencyId = config.path("defaultAgencyId").asText("");
+        feedId = config.path("feedId").asText("");
         String sourceType = config.path("sourceType").asText();
         if (sourceType != null) {
             if (sourceType.equals("gtfs-http")) {
@@ -111,35 +112,34 @@ public class PollingStoptimeUpdater extends PollingGraphUpdater {
             this.maxSnapshotFrequency = maxSnapshotFrequency;
         }
         this.purgeExpiredData = config.path("purgeExpiredData").asBoolean(true);
-        LOG.info("Creating stop time updater running every {} seconds : {}", frequencySec, updateSource);
+        if (config.path("fuzzyTripMatching").asBoolean(false)) {
+            this.fuzzyTripMatcher = new GtfsRealtimeFuzzyTripMatcher(graph.index);
+        }
+        LOG.info("Creating stop time updater running every {} seconds : {}", pollingPeriodSeconds, updateSource);
     }
 
     @Override
-    public void setup() throws InterruptedException, ExecutionException {
-        // Create a realtime data snapshot source and wait for runnable to be executed
-        updaterManager.executeBlocking(new GraphWriterRunnable() {
-            @Override
-            public void run(Graph graph) {
-                // Only create a realtime data snapshot source if none exists already
-                TimetableSnapshotSource snapshotSource = graph.timetableSnapshotSource;
-                if (snapshotSource == null) {
-                    snapshotSource = new TimetableSnapshotSource(graph);
-                    // Add snapshot source to graph
-                    graph.timetableSnapshotSource = (snapshotSource);
-                }
-
-                // Set properties of realtime data snapshot source
-                if (logFrequency != null) {
-                    snapshotSource.logFrequency = (logFrequency);
-                }
-                if (maxSnapshotFrequency != null) {
-                    snapshotSource.maxSnapshotFrequency = (maxSnapshotFrequency);
-                }
-                if (purgeExpiredData != null) {
-                    snapshotSource.purgeExpiredData = (purgeExpiredData);
-                }
-            }
-        });
+    public void setup(Graph graph) {
+        // Only create a realtime data snapshot source if none exists already
+        TimetableSnapshotSource snapshotSource = graph.timetableSnapshotSource;
+        if (snapshotSource == null) {
+            snapshotSource = new TimetableSnapshotSource(graph);
+            // Add snapshot source to graph
+            graph.timetableSnapshotSource = (snapshotSource);
+        }
+        // Set properties of realtime data snapshot source
+        if (logFrequency != null) {
+            snapshotSource.logFrequency = (logFrequency);
+        }
+        if (maxSnapshotFrequency != null) {
+            snapshotSource.maxSnapshotFrequency = (maxSnapshotFrequency);
+        }
+        if (purgeExpiredData != null) {
+            snapshotSource.purgeExpiredData = (purgeExpiredData);
+        }
+        if (fuzzyTripMatcher != null) {
+            snapshotSource.fuzzyTripMatcher = fuzzyTripMatcher;
+        }
     }
 
     /**
@@ -150,11 +150,12 @@ public class PollingStoptimeUpdater extends PollingGraphUpdater {
     public void runPolling() {
         // Get update lists from update source
         List<TripUpdate> updates = updateSource.getUpdates();
+        boolean fullDataset = updateSource.getFullDatasetValueOfLastUpdates();
 
-        if (updates != null && updates.size() > 0) {
+        if (updates != null) {
             // Handle trip updates via graph writer runnable
             TripUpdateGraphWriterRunnable runnable =
-                    new TripUpdateGraphWriterRunnable(updates, agencyId);
+                    new TripUpdateGraphWriterRunnable(fullDataset, updates, feedId);
             updaterManager.execute(runnable);
         }
     }

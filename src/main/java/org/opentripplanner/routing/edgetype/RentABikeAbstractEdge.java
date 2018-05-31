@@ -15,6 +15,7 @@ package org.opentripplanner.routing.edgetype;
 
 import java.util.Set;
 
+import org.opentripplanner.routing.bike_rental.BikeRentalStation;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.StateEditor;
@@ -25,6 +26,7 @@ import org.opentripplanner.routing.vertextype.BikeRentalStationVertex;
 
 import com.google.common.collect.Sets;
 import com.vividsolutions.jts.geom.LineString;
+import java.util.Locale;
 
 /**
  * Renting or dropping off a rented bike edge.
@@ -62,11 +64,9 @@ public abstract class RentABikeAbstractEdge extends Edge {
         }
 
         StateEditor s1 = s0.edit(this);
-        s1.incrementWeight(options.arriveBy ? options.bikeRentalDropoffCost
-                : options.bikeRentalPickupCost);
-        s1.incrementTimeInSeconds(options.arriveBy ? options.bikeRentalDropoffTime
-                : options.bikeRentalPickupTime);
-        s1.setBikeRenting(true);
+        s1.incrementWeight(options.arriveBy ? options.bikeRentalDropoffCost : options.bikeRentalPickupCost);
+        s1.incrementTimeInSeconds(options.arriveBy ? options.bikeRentalDropoffTime : options.bikeRentalPickupTime);
+        s1.beginVehicleRenting(((BikeRentalStationVertex)fromv).getVehicleMode());
         s1.setBikeRentalNetwork(networks);
         s1.setBackMode(s0.getNonTransitMode());
         State s1b = s1.makeState();
@@ -86,11 +86,9 @@ public abstract class RentABikeAbstractEdge extends Edge {
         }
 
         StateEditor s1e = s0.edit(this);
-        s1e.incrementWeight(options.arriveBy ? options.bikeRentalPickupCost
-                : options.bikeRentalDropoffCost);
-        s1e.incrementTimeInSeconds(options.arriveBy ? options.bikeRentalPickupTime
-                : options.bikeRentalDropoffTime);
-        s1e.setBikeRenting(false);
+        s1e.incrementWeight(options.arriveBy ? options.bikeRentalPickupCost : options.bikeRentalDropoffCost);
+        s1e.incrementTimeInSeconds(options.arriveBy ? options.bikeRentalPickupTime : options.bikeRentalDropoffTime);
+        s1e.doneVehicleRenting();
         s1e.setBackMode(TraverseMode.WALK);
         State s1 = s1e.makeState();
         return s1;
@@ -109,6 +107,11 @@ public abstract class RentABikeAbstractEdge extends Edge {
     @Override
     public String getName() {
         return getToVertex().getName();
+    }
+
+    @Override
+    public String getName(Locale locale) {
+        return getToVertex().getName(locale);
     }
 
     @Override

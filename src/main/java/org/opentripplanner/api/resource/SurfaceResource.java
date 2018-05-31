@@ -1,21 +1,23 @@
 package org.opentripplanner.api.resource;
 
 import com.google.common.collect.Maps;
-
 import org.geotools.feature.FeatureCollection;
 import org.geotools.geojson.feature.FeatureJSON;
 import org.geotools.geometry.Envelope2D;
-import org.opentripplanner.analyst.ResultSet;
 import org.opentripplanner.analyst.PointSet;
+import org.opentripplanner.analyst.ResultSet;
 import org.opentripplanner.analyst.SampleSet;
 import org.opentripplanner.analyst.TimeSurface;
 import org.opentripplanner.analyst.core.IsochroneData;
 import org.opentripplanner.analyst.core.SlippyTile;
 import org.opentripplanner.analyst.request.RenderRequest;
+import org.opentripplanner.analyst.request.SampleGridRenderer.WTWD;
 import org.opentripplanner.analyst.request.TileRequest;
 import org.opentripplanner.api.common.ParameterException;
 import org.opentripplanner.api.common.RoutingResource;
 import org.opentripplanner.api.model.TimeSurfaceShort;
+import org.opentripplanner.api.parameter.CRSParameter;
+import org.opentripplanner.api.parameter.IsoTimeParameter;
 import org.opentripplanner.api.parameter.Layer;
 import org.opentripplanner.api.parameter.MIMEImageFormat;
 import org.opentripplanner.api.parameter.Style;
@@ -26,7 +28,6 @@ import org.opentripplanner.routing.spt.ShortestPathTree;
 import org.opentripplanner.standalone.Router;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.opentripplanner.analyst.request.SampleGridRenderer.WTWD;
 
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -41,13 +42,16 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriInfo;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Surfaces cannot be isolated per-router because sometimes you want to compare two surfaces from different router IDs.
+ * Though one could question whether that really makes sense (perhaps alternative scenarios should be "within" the same router)
+ */
 @Path("/surfaces")
 @Produces({ MediaType.APPLICATION_JSON })
 public class SurfaceResource extends RoutingResource {
@@ -108,7 +112,14 @@ public class SurfaceResource extends RoutingResource {
         // DEBUG return Response.ok().entity(surface).build();
     }
 
-    /** Evaluate a surface at all the points in a PointSet. */
+    /**
+     * Evaluate a surface at all the points in a PointSet.
+     * This sends back a ResultSet serialized as JSON.
+     * Normally we return historgrams with the number of points reached (in field 'counts') and the number of
+     * opportunities reached (i.e. the sum of the magnitudes of all points reached) in each one-minute bin of travel
+     * time.
+     * @param detail if true, include the travel time to every point in the pointset (which is in fact an ordered list)
+     */
     @GET @Path("/{surfaceId}/indicator")
     public Response getIndicator (@PathParam("surfaceId") Integer surfaceId,
                                   @QueryParam("targets")  String  targetPointSetId,
@@ -116,7 +127,6 @@ public class SurfaceResource extends RoutingResource {
                                   @QueryParam("detail")   boolean detail) {
 
         final TimeSurface surf = otpServer.surfaceCache.get(surfaceId);
-
         if (surf == null) return badRequest("Invalid TimeSurface ID.");
         final PointSet pset = otpServer.pointSetCache.get(targetPointSetId);
         if (pset == null) return badRequest("Missing or invalid target PointSet ID.");
@@ -124,7 +134,7 @@ public class SurfaceResource extends RoutingResource {
         Router router = otpServer.getRouter(surf.routerId);
         // TODO cache this sampleset
         SampleSet samples = pset.getSampleSet(router.graph);
-        final ResultSet indicator = new ResultSet(samples, surf);
+        final ResultSet indicator = new ResultSet(samples, surf, detail, detail);
         if (indicator == null) return badServer("Could not compute indicator as requested.");
 
         return Response.ok().entity(new StreamingOutput() {
@@ -140,11 +150,13 @@ public class SurfaceResource extends RoutingResource {
     @GET @Path("/{surfaceId}/isochrone")
     public Response getIsochrone (
             @PathParam("surfaceId") Integer surfaceId,
-            @QueryParam("spacing") int spacing) {
+            @QueryParam("spacing") int spacing,
+            @QueryParam("nMax") @DefaultValue("1") int nMax) {
         final TimeSurface surf = otpServer.surfaceCache.get(surfaceId);
         if (surf == null) return badRequest("Invalid TimeSurface ID.");
-        if (spacing < 1) spacing = 5;
-        List<IsochroneData> isochrones = getIsochronesAccumulative(surf, spacing);
+        if (spacing < 1) spacing = 30;
+        List<IsochroneData> isochrones = getIsochronesAccumulative(surf, spacing, nMax);
+        // NOTE that cutoffMinutes in the surface must be properly set for the following call to work
         final FeatureCollection fc = LIsochrone.makeContourFeatures(isochrones);
         return Response.ok().entity(new StreamingOutput() {
             @Override
@@ -232,7 +244,7 @@ public class SurfaceResource extends RoutingResource {
      * @param spacing the number of minutes between isochrones
      * @return a list of evenly-spaced isochrones up to the timesurface's cutoff point
      */
-    private List<IsochroneData> getIsochronesAccumulative(TimeSurface surf, int spacing) {
+    public static List<IsochroneData> getIsochronesAccumulative(TimeSurface surf, int spacing, int nMax) {
 
         long t0 = System.currentTimeMillis();
         if (surf.sampleGrid == null) {
@@ -243,7 +255,7 @@ public class SurfaceResource extends RoutingResource {
                 surf.sampleGrid.delaunayTriangulate(), new WTWD.IsolineMetric());
 
         List<IsochroneData> isochrones = new ArrayList<IsochroneData>();
-        for (int minutes = spacing; minutes <= surf.cutoffMinutes; minutes += spacing) {
+        for (int minutes = spacing, n = 0; minutes <= surf.cutoffMinutes && n < nMax; minutes += spacing, n++) {
             int seconds = minutes * 60;
             WTWD z0 = new WTWD();
             z0.w = 1.0;
@@ -251,12 +263,41 @@ public class SurfaceResource extends RoutingResource {
             z0.d = 300; // meters. TODO set dynamically / properly, make sure it matches grid cell size?
             IsochroneData isochrone = new IsochroneData(seconds, isolineBuilder.computeIsoline(z0));
             isochrones.add(isochrone);
-        }
+         }
 
         long t1 = System.currentTimeMillis();
         LOG.debug("Computed {} isochrones in {} msec", isochrones.size(), (int) (t1 - t0));
 
         return isochrones;
     }
+
+    /**
+     * Produce a single grayscale raster of travel time, like travel time tiles but not broken into tiles.
+     */
+    @Path("/{surfaceId}/raster")
+    @GET @Produces("image/*")
+    public Response getRaster(
+            @PathParam("surfaceId") Integer surfaceId,
+            @QueryParam("width") @DefaultValue("1024") Integer width,
+            @QueryParam("height") @DefaultValue("768") Integer height,
+            @QueryParam("resolution") Double resolution,
+            @QueryParam("time") IsoTimeParameter time,
+            @QueryParam("format") @DefaultValue("image/geotiff") MIMEImageFormat format,
+            @QueryParam("crs") @DefaultValue("EPSG:4326") CRSParameter crs) throws Exception {
+
+        TimeSurface surface = otpServer.surfaceCache.get(surfaceId);
+        Router router = otpServer.getRouter(surface.routerId);
+        // BoundingBox is a subclass of Envelope, an Envelope2D constructor parameter
+        Envelope2D bbox = new Envelope2D(router.graph.getGeomIndex().getBoundingBox(crs.crs));
+        if (resolution != null) {
+            width  = (int) Math.ceil(bbox.width  / resolution);
+            height = (int) Math.ceil(bbox.height / resolution);
+        }
+
+        TileRequest tileRequest = new TileRequest(bbox, width, height);
+        RenderRequest renderRequest = new RenderRequest(format, Layer.TRAVELTIME, Style.GRAY, false, false);
+        return router.renderer.getResponse(tileRequest, surface, null, renderRequest);
+    }
+
 
 }

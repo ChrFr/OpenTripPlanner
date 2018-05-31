@@ -98,7 +98,7 @@ otp.modules.planner.PlannerModule =
         500 : _tr("We're sorry. The trip planner is temporarily unavailable. Please try again later."),
         503 : _tr("We're sorry. The trip planner is temporarily unavailable. Please try again later."),
         400 : _tr("Trip is not possible.  You might be trying to plan a trip outside the map data boundary."),
-        404 : _tr("Trip is not possible.  Your start or end point might not be safely accessible (for instance), you might be starting on a residential street connected only to a highway)."),
+        404 : _tr("No trip found. There may be no transit service within the maximum specified distance or at the specified time, or your start or end point might not be safely accessible."),
         406 : _tr("No transit times available. The date may be past or too far in the future or there may not be transit service for your trip at the time you chose."),
         408 : _tr("The trip planner is taking way too long to process your request. Please try again later."),
         413 : _tr("The request has errors that the server is not willing or able to process."),
@@ -139,6 +139,8 @@ otp.modules.planner.PlannerModule =
             this.defaultQueryParams.maxWalkDistance = this.defaultQueryParams.imperialDefaultMaxWalkDistance;
         }
 
+        _.extend(this.defaultQueryParams, this.getExtendedQueryParams());
+
         if(_.has(this.options, 'defaultQueryParams')) {
             _.extend(this.defaultQueryParams, this.options.defaultQueryParams);
         }
@@ -161,7 +163,7 @@ otp.modules.planner.PlannerModule =
         this.addLayer("Paths", this.pathLayer);
         this.addLayer("Path Markers", this.pathMarkerLayer);
 
-        this.webapp.indexApi.loadAgencies(this);
+        //this.webapp.indexApi.loadAgencies(this);
         this.webapp.indexApi.loadRoutes(this, function() {
             this.routesLoaded();
         });
@@ -219,7 +221,9 @@ otp.modules.planner.PlannerModule =
             this.startMarker.bindPopup('<strong>' + pgettext('popup', 'Start') + '</strong>');
             this.startMarker.on('dragend', $.proxy(function() {
                 this.webapp.hideSplash();
-                this.startLatLng = this.startMarker.getLatLng();
+                this.setStartPoint(this.startMarker.getLatLng(), false);
+                // start flag has beenpicked up, clear any name that was set
+                this.startName=null;
                 this.invokeHandlers("startChanged", [this.startLatLng]);
                 if(typeof this.userPlanTripStart == 'function') this.userPlanTripStart();
                 this.planTripFunction.apply(this);//planTrip();
@@ -250,7 +254,9 @@ otp.modules.planner.PlannerModule =
             this.endMarker.bindPopup('<strong>' + _tr('Destination') + '</strong>');
             this.endMarker.on('dragend', $.proxy(function() {
                 this.webapp.hideSplash();
-                this.endLatLng = this.endMarker.getLatLng();
+                this.setEndPoint(this.endMarker.getLatLng(), false);
+                // end flag has beenpicked up, clear any name that was set
+                this.endName=null;
                 this.invokeHandlers("endChanged", [this.endLatLng]);
                 if(typeof this.userPlanTripStart == 'function') this.userPlanTripStart();
                 this.planTripFunction.apply(this);//this_.planTrip();
@@ -287,11 +293,11 @@ otp.modules.planner.PlannerModule =
     },
 
     restoreMarkers : function(queryParams) {
-      	this.startLatLng = otp.util.Geo.stringToLatLng(otp.util.Itin.getLocationPlace(queryParams.fromPlace));
-    	this.setStartPoint(this.startLatLng, false);
+        this.startLatLng = otp.util.Geo.stringToLatLng(otp.util.Itin.getLocationPlace(queryParams.fromPlace));
+        this.setStartPoint(this.startLatLng, false,this.startName);
 
-      	this.endLatLng = otp.util.Geo.stringToLatLng(otp.util.Itin.getLocationPlace(queryParams.toPlace));
-    	this.setEndPoint(this.endLatLng, false);
+        this.endLatLng = otp.util.Geo.stringToLatLng(otp.util.Itin.getLocationPlace(queryParams.toPlace));
+        this.setEndPoint(this.endLatLng, false,this.endName);
     },
 
     planTrip : function(existingQueryParams, apiMethod) {
@@ -352,12 +358,19 @@ otp.modules.planner.PlannerModule =
                     triangleSafetyFactor: this_.triangleSafetyFactor
                 });
             }
-            _.extend(queryParams, this.getExtendedQueryParams());
+            if(this.maxHours) queryParams.maxHours = this.maxHours;
+            if(this.numItineraries) queryParams.numItineraries = this.numItineraries;
+            if(this.minTransferTime) queryParams.minTransferTime = this.minTransferTime;
+            if(this.showIntermediateStops) queryParams.showIntermediateStops = this.showIntermediateStops;
+
             if(otp.config.routerId !== undefined) {
                 queryParams.routerId = otp.config.routerId;
             }
         }
         $('#otp-spinner').show();
+
+        //sends wanted translation to server
+        _.extend(queryParams, {locale : otp.config.locale.config.locale_short} );
 
         this.lastQueryParams = queryParams;
 
@@ -376,6 +389,9 @@ otp.modules.planner.PlannerModule =
         this.currentRequest = $.ajax(url, {
             data:       queryParams,
             dataType:   'JSON',
+            //Sends arrays as &b=1&b=2 instead of b[]=1&b[]=2 which is what
+            //Jersey expects
+            traditional: true,
 
             success: function(data) {
                 $('#otp-spinner').hide();
@@ -385,48 +401,14 @@ otp.modules.planner.PlannerModule =
                 }
 
                 if(data.plan) {
-                    // compare returned plan.date to sent date/time to determine timezone offset (unless set explicitly in config.js)
-                    otp.config.timeOffset = (otp.config.timeOffset) ||
-                        (moment(queryParams.date+" "+queryParams.time, "MM-DD-YYYY h:mma") - moment(data.plan.date))/3600000;
-
-                    var tripPlan = new otp.modules.planner.TripPlan(data.plan, queryParams);
-
-                    var invalidTrips = [];
-
-                    // check trip validity
-                    if(typeof this_.checkTripValidity == 'function') {
-                        for(var i = 0; i < tripPlan.itineraries.length; i++) {
-                            var itin = tripPlan.itineraries[i];
-                            for(var l = 0; l < itin.itinData.legs.length; l++) {
-                                var leg = itin.itinData.legs[l];
-                                if(otp.util.Itin.isTransit(leg.mode)) {
-                                    var tripId = leg.agencyId + "_"+leg.tripId;
-                                    if(!this_.checkTripValidity(tripId, leg, itin)) {
-                                        //console.log("INVALID TRIP");
-                                        invalidTrips.push(tripId);
-                                    }
-                                }
-                            }
-                        }
+                    // allow for optional pre-processing step (used by Fieldtrip module)
+                    if(typeof this_.preprocessPlan == 'function') {
+                        this_.preprocessPlan(data.plan, queryParams, function() {
+                            this_.planReceived(data.plan, url, queryParams, successCallback);
+                        });
                     }
-
-                    if(invalidTrips.length == 0) { // all trips are valid; proceed with this tripPlan
-                        successCallback.call(this_, tripPlan);
-                    }
-                    else { // run planTrip again w/ invalid trips banned
-                        this_.planTripRequestCount++;
-                        if(this_.planTripRequestCount > 10) {
-                            this_.noTripFound({ 'msg' : 'Number of trip requests exceeded without valid results'});
-                        }
-                        else {
-                            if(queryParams.bannedTrips && queryParams.bannedTrips.length > 0) {
-                                queryParams.bannedTrips += ',' + invalidTrips.join(',');
-                            }
-                            else {
-                                queryParams.bannedTrips = invalidTrips.join(',');
-                            }
-                            this_.planTripRequest(url, queryParams, successCallback);
-                        }
+                    else {
+                        this_.planReceived(data.plan, url, queryParams, successCallback);
                     }
                 }
                 else {
@@ -437,6 +419,50 @@ otp.modules.planner.PlannerModule =
             }
         });
 
+    },
+
+    planReceived : function(plan, url, queryParams, successCallback) {
+        // compare returned plan.date to sent date/time to determine timezone offset (unless set explicitly in config.js)
+        otp.config.timeOffset = (otp.config.timeOffset) ||
+            (moment(queryParams.date+" "+queryParams.time, "MM-DD-YYYY h:mma") - moment(plan.date))/3600000;
+
+        var tripPlan = new otp.modules.planner.TripPlan(plan, queryParams);
+
+        var invalidTrips = [];
+
+        // check trip validity
+        if(typeof this.checkTripValidity == 'function') {
+            for(var i = 0; i < tripPlan.itineraries.length; i++) {
+                var itin = tripPlan.itineraries[i];
+                for(var l = 0; l < itin.itinData.legs.length; l++) {
+                    var leg = itin.itinData.legs[l];
+                    if(otp.util.Itin.isTransit(leg.mode)) {
+                        if(!this.checkTripValidity(leg.tripId, leg, itin)) {
+                            invalidTrips.push(leg.tripId);
+                        }
+                    }
+                }
+            }
+        }
+
+        if(invalidTrips.length == 0) { // all trips are valid; proceed with this tripPlan
+            successCallback.call(this, tripPlan);
+        }
+        else { // run planTrip again w/ invalid trips banned
+            this.planTripRequestCount++;
+            if(this.planTripRequestCount > 10) {
+                this.noTripFound({ 'msg' : 'Number of trip requests exceeded without valid results'});
+            }
+            else {
+                if(queryParams.bannedTrips && queryParams.bannedTrips.length > 0) {
+                    queryParams.bannedTrips += ',' + invalidTrips.join(',');
+                }
+                else {
+                    queryParams.bannedTrips = invalidTrips.join(',');
+                }
+                this.planTripRequest(url, queryParams, successCallback);
+            }
+        }
     },
 
     getExtendedQueryParams : function() {
@@ -586,6 +612,7 @@ otp.modules.planner.PlannerModule =
         if(mode === "BUS") return '#080';
         if(mode === "TRAM") return '#800';
         if(mode === "CAR") return '#444';
+        if(mode === "AIRPLANE") return '#f0f';
         return '#aaa';
     },
 
@@ -610,15 +637,15 @@ otp.modules.planner.PlannerModule =
     // legacy -- deprecated by restoreTrip (above)
     restorePlan : function(data){
 
-    	this.startLatLng = new L.LatLng(data.startLat, data.startLon);
-    	this.setStartPoint(this.startLatLng, false);
+        this.startLatLng = new L.LatLng(data.startLat, data.startLon);
+        this.setStartPoint(this.startLatLng, false,this.startName);
 
-    	this.endLatLng = new L.LatLng(data.endLat, data.endLon);
-    	this.setEndPoint(this.endLatLng, false);
+        this.endLatLng = new L.LatLng(data.endLat, data.endLon);
+        this.setEndPoint(this.endLatLng, false,this.endName);
 
-    	this.webapp.setBounds(new L.LatLngBounds([this.startLatLng, this.endLatLng]));
+        this.webapp.setBounds(new L.LatLngBounds([this.startLatLng, this.endLatLng]));
 
-    	this.planTrip(data.data, true);
+        this.planTrip(data.data, true);
     },
 
 

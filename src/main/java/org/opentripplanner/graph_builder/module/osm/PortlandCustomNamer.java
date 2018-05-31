@@ -15,12 +15,15 @@ package org.opentripplanner.graph_builder.module.osm;
 
 import java.util.HashSet;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Iterables;
+
 import org.opentripplanner.openstreetmap.model.OSMWithTags;
 import org.opentripplanner.graph_builder.services.osm.CustomNamer;
 import org.opentripplanner.routing.edgetype.StreetEdge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
+import org.opentripplanner.util.NonLocalizedString;
 
 /**
  * These rules were developed in consultation with Grant Humphries, PJ Houser, and Mele Sax-Barnett.
@@ -139,6 +142,11 @@ public class PortlandCustomNamer implements CustomNamer {
         }
     }
 
+    @Override
+    public void configure(JsonNode config) {
+        // No configuration needed.
+    }
+
     private String nameAccordingToDestination(Graph graph, StreetEdge e, int maxDepth) {
         if (maxDepth == 0) {
             return null;
@@ -150,11 +158,11 @@ public class PortlandCustomNamer implements CustomNamer {
                 if (name == null) {
                     continue;
                 }
-                e.setName(name);
+                e.setName(new NonLocalizedString(name));
                 return name;
             } else {
                 String name = out.getName();
-                e.setName(name);
+                e.setName(new NonLocalizedString(name));
                 return name;
             }
         }
@@ -172,11 +180,11 @@ public class PortlandCustomNamer implements CustomNamer {
                 if (name == null) {
                     continue;
                 }
-                e.setName(name);
+                e.setName(new NonLocalizedString(name));
                 return name;
             } else {
                 String name = in.getName();
-                e.setName(name);
+                e.setName(new NonLocalizedString(name));
                 return name;
             }
         }

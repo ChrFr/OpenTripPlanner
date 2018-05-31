@@ -41,6 +41,8 @@ import org.opentripplanner.routing.edgetype.StreetTraversalPermission;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
+import org.opentripplanner.routing.spt.DominanceFunction;
+import org.opentripplanner.routing.spt.DominanceFunction.EarliestArrival;
 import org.opentripplanner.routing.spt.GraphPath;
 import org.opentripplanner.routing.spt.ShortestPathTree;
 import org.opentripplanner.routing.vertextype.IntersectionVertex;
@@ -60,6 +62,7 @@ import com.vividsolutions.jts.geom.MultiLineString;
 import com.vividsolutions.jts.geom.MultiPolygon;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
+import org.opentripplanner.util.I18NString;
 
 /**
  * Theoretically, it is not correct to build the visibility graph on the joined polygon of areas
@@ -105,7 +108,47 @@ public class WalkableAreaBuilder {
         this.__handler = __handler;
     }
 
-    public void build(AreaGroup group) {
+    /**
+     * For all areas just use outermost rings as edges so that areas can be routable without visibility calculations
+     * @param group
+     */
+    public void buildWithoutVisibility(AreaGroup group) {
+        Set<Edge> edges = new HashSet<Edge>();
+
+        // create polygon and accumulate nodes for area
+        for (Ring ring : group.outermostRings) {
+
+            AreaEdgeList edgeList = new AreaEdgeList();
+            // the points corresponding to concave or hole vertices
+            // or those linked to ways
+            HashSet<P2<OSMNode>> alreadyAddedEdges = new HashSet<P2<OSMNode>>();
+
+            // we also want to fill in the edges of this area anyway, because we can,
+            // and to avoid the numerical problems that they tend to cause
+            for (Area area : group.areas) {
+
+                if (!ring.toJtsPolygon().contains(area.toJTSMultiPolygon())) {
+                    continue;
+                }
+
+                for (Ring outerRing : area.outermostRings) {
+                    for (int i = 0; i < outerRing.nodes.size(); ++i) {
+                        createEdgesForRingSegment(edges, edgeList, area, outerRing, i,
+                            alreadyAddedEdges);
+                    }
+                    //TODO: is this actually needed?
+                    for (Ring innerRing : outerRing.holes) {
+                        for (int j = 0; j < innerRing.nodes.size(); ++j) {
+                            createEdgesForRingSegment(edges, edgeList, area, innerRing, j,
+                                alreadyAddedEdges);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public void buildWithVisibility(AreaGroup group, boolean platformEntriesLinking) {
         Set<OSMNode> startingNodes = new HashSet<OSMNode>();
         Set<Vertex> startingVertices = new HashSet<Vertex>();
         Set<Edge> edges = new HashSet<Edge>();
@@ -126,6 +169,14 @@ public class WalkableAreaBuilder {
             // we also want to fill in the edges of this area anyway, because we can,
             // and to avoid the numerical problems that they tend to cause
             for (Area area : group.areas) {
+
+                // public transform platforms will be handled separately if platformEntriesLinking
+                // parameter is true
+                if(platformEntriesLinking
+                        && "platform".equals(area.parent.getTag("public_transport"))) {
+                    continue;
+                }
+
                 if (!ring.toJtsPolygon().contains(area.toJTSMultiPolygon())) {
                     continue;
                 }
@@ -220,7 +271,7 @@ public class WalkableAreaBuilder {
                             endEndpoint.getCoordinate() };
                     GeometryFactory geometryFactory = GeometryUtils.getGeometryFactory();
                     LineString line = geometryFactory.createLineString(coordinates);
-                    if (poly.contains(line)) {
+                    if (poly != null && poly.contains(line)) {
 
                         createSegments(nodeI, nodeJ, startEndpoint, endEndpoint, group.areas,
                                 edgeList, edges);
@@ -273,6 +324,7 @@ public class WalkableAreaBuilder {
         }
         RoutingRequest options = new RoutingRequest(mode);
         options.setDummyRoutingContext(graph);
+        options.dominanceFunction = new DominanceFunction.EarliestArrival();
         GenericDijkstra search = new GenericDijkstra(options);
         search.setSkipEdgeStrategy(new ListedEdgesOnly(edges));
         Set<Edge> usedEdges = new HashSet<Edge>();
@@ -309,6 +361,9 @@ public class WalkableAreaBuilder {
     }
 
     private Polygon toJTSPolygon(VLPolygon visibilityPolygon) {
+        if (visibilityPolygon.vertices.isEmpty()) {
+            return null;
+        }
         // incomprehensibly, visilibity's routines for figuring out point-polygon containment are
         // too broken
         // to use here, so we have to fall back to JTS.
@@ -378,7 +433,7 @@ public class WalkableAreaBuilder {
 
             String label = "way (area) " + areaEntity.getId() + " from " + startEndpoint.getLabel()
                     + " to " + endEndpoint.getLabel();
-            String name = __handler.getNameForWay(areaEntity, label);
+            I18NString name = __handler.getNameForWay(areaEntity, label);
 
             AreaEdge street = edgeFactory.createAreaEdge(startEndpoint, endEndpoint, line, name,
                     length, areaPermissions, false, edgeList);
@@ -408,7 +463,7 @@ public class WalkableAreaBuilder {
             }
 
             if (areaEntity.isTagFalse("wheelchair")) {
-                street.setWheelchairAccessible(false);
+                backStreet.setWheelchairAccessible(false);
             }
 
             backStreet.setStreetClass(cls);
@@ -485,7 +540,7 @@ public class WalkableAreaBuilder {
             namedArea.setStreetClass(cls);
 
             String id = "way (area) " + areaEntity.getId() + " (splitter linking)";
-            String name = __handler.getNameForWay(areaEntity, id);
+            I18NString name = __handler.getNameForWay(areaEntity, id);
             namedArea.setName(name);
 
             WayProperties wayData = wayPropertySet.getDataForWay(areaEntity);

@@ -76,7 +76,7 @@ specify how long it takes to reach a subway platform
 ```JSON
 // build-config.json
 {
-  subwayAccessTime: 2.5
+  "subwayAccessTime": 2.5
 }
 ```
 
@@ -109,7 +109,7 @@ connections between each pair of stops in the same station to favor in-station t
 ```JSON
 // build-config.json
 {
-  stationTransfers: true
+  "stationTransfers": true
 }
 ```
 
@@ -138,16 +138,26 @@ directory:
 ```JSON
 // build-config.json
 {
-  fetchElevationUS: true
+  "fetchElevationUS": true
 }
 ```
 
 You may also want to add the `--cache <directory>` command line parameter to specify a custom NED tile cache location.
 
 NED downloads take quite a long time and slow down the graph building process. The USGS will also deliver the
-whole dataset in bulk if you [send them a hard drive](http://ned.usgs.gov/faq.html#DATA).
-OpenTripPlanner contains another module that will then automatically fetch data in this format from an Amazon S3 copy of
-your bulk data.
+whole dataset in bulk if you [send them a hard drive](http://ned.usgs.gov/faq.html#DATA). OpenTripPlanner contains
+another module that will then automatically fetch data in this format from an Amazon S3 copy of your bulk data.
+You can configure it as follows in `build-config.json`:
+
+```JSON
+{
+    "elevationBucket" : {
+        "accessKey" : "your-aws-access-key",
+        "secretKey" : "corresponding-aws-secret-key",
+        "bucketName" : "ned13"
+    }
+}
+```
 
 
 ### Other raster elevation data
@@ -158,11 +168,167 @@ national geographic surveys, or you can always fall back on the worldwide
 (roughly 30 meters horizontally) but it can give acceptable results.
 
 Simply place the elevation data file in the directory with the other graph builder inputs, alongside the GTFS and OSM data.
-Make sure the file has a `.tiff` extension, and the graph builder should detect its presence and apply
+Make sure the file has a `.tiff` or `.tif` extension, and the graph builder should detect its presence and apply
 the elevation data to the streets.
+
+OTP should automatically handle DEM GeoTIFFs in most common projections. You may want to check for elevation-related
+error messages during the graph build process to make sure OTP has properly discovered the projection. If you are using
+a DEM in unprojected coordinates make sure that the axis order is (longitude, latitude) rather than
+(latitude, longitude). Unfortunately there is no reliable standard for WGS84 axis order, so OTP uses the same axis
+order as the above-mentioned SRTM data, which is also the default for the popular Proj4 library.
+
+DEM files(USGS DEM) is not supported by OTP, but can be converted to GeoTIFF with tools like [GDAL](http://www.gdal.org/). 
+Use `gdal_merge.py -o merged.tiff *.dem` to merge a set of `dem` files into one `tif` file.
+
+
+## Fares configuration
+
+By default OTP will compute fares according to the GTFS specification if fare data is provided in your GTFS input.
+For more complex scenarios or to handle bike rental fares, it is necessary to manually configure fares using the
+`fares` section in `build-config.json`. You can combine different fares (for example transit and bike-rental)
+by defining a `combinationStrategy` parameter, and a list of sub-fares to combine (all fields starting with `fare`
+are considered to be sub-fares).
+
+```JSON
+// build-config.json
+{
+  // Select the custom fare "seattle"
+  "fares": "seattle",
+  // OR this alternative form that could allow additional configuration
+  "fares": {
+	"type": "seattle"
+  }
+}
+```
+
+```JSON
+// build-config.json
+{
+  "fares": {
+    // Combine two fares by simply adding them
+    "combinationStrategy": "additive",
+    // First fare to combine
+    "fare0": "new-york",
+    // Second fare to combine
+    "fare1": {
+      "type": "bike-rental-time-based",
+      "currency": "USD",
+      "prices": {
+          // For trip shorter than 30', $4 fare
+          "30":   4.00,
+          // For trip shorter than 1h, $6 fare
+          "1:00": 6.00
+      }
+    }
+    // We could also add fareFoo, fareBar...
+  }
+}
+```
+
+The current list of custom fare type is:
+
+- `bike-rental-time-based` - accepting the following parameters:
+    - `currency` - the ISO 4217 currency code to use, such as `"EUR"` or `"USD"`,
+    - `prices` - a list of {time, price}. The resulting cost is the smallest cost where the elapsed time of bike rental is lower than the defined time.
+- `san-francisco` (no parameters)
+- `new-york` (no parameters)
+- `seattle` (no parameters)
+
+The current list of `combinationStrategy` is:
+
+- `additive` - simply adds all sub-fares.
+
+## OSM / OpenStreetMap configuration
+
+It is possible to adjust how OSM data is interpreted by OpenTripPlanner when building the road part of the routing graph.
+
+### Way property sets
+
+OSM tags have different meanings in different countries, and how the roads in a particular country or region are tagged affects routing. As an example are roads tagged with `highway=trunk (mainly) walkable in Norway, but forbidden in some other countries. This might lead to OTP being unable to snap stops to these roads, or by giving you poor routing results for walking and biking.
+You can adjust which road types that are accessible by foot, car & bicycle as well as speed limits, suitability for biking and walking.
+
+There are currently 2 wayPropertySets defined;
+
+- `default` which is based on California/US mapping standard
+- `norway` which is adjusted to rules and speeds in Norway
+
+To add your own custom property set have a look at `org.opentripplanner.graph_builder.module.osm.NorwayWayPropertySet` and `org.opentripplanner.graph_builder.module.osm.DefaultWayPropertySet`. If you choose to mainly rely on the default rules, make sure you add your own rules first before applying the default ones. The mechanism is that for any two identical tags, OTP will use the first one.
+
+```JSON
+// build-config.json
+{
+  osmWayPropertySet: "norway"
+}
+```
+
+
+### Custom naming
+
+You can define a custom naming scheme for elements drawn from OSM by defining an `osmNaming` field in `build-config.json`,
+such as:
+
+```JSON
+// build-config.json
+{
+  "osmNaming": "portland"
+}
+```
+
+There is currently only one custom naming module called `portland` (which has no parameters).
 
 
 # Runtime router configuration
+
+This section covers all options that can be set for each router using the `router-config.json` file.
+These options can be applied by the OTP server without rebuilding the graph.
+
+
+## Routing defaults
+
+There are many trip planning options used in the OTP web API, and more exist
+internally that are not exposed via the API. You may want to change the default value for some of these parameters,
+i.e. the value which will be applied unless it is overridden in a web API request.
+
+A full list of them can be found in the RoutingRequest class
+[in the Javadoc](http://dev.opentripplanner.org/javadoc/master/org/opentripplanner/routing/core/RoutingRequest.html).
+Any public field or setter method in this class can be given a default value using the routingDefaults section of
+`router-config.json` as follows:
+
+```JSON
+{
+    "routingDefaults": {
+        "walkSpeed": 2.0,
+        "stairsReluctance": 4.0,
+        "carDropoffTime": 240
+    }
+}
+```
+
+### Drive-to-transit routing defaults
+
+When using the "park and ride" or "kiss and ride" modes (drive to transit), the initial driving time to reach a transit
+stop or park and ride facility is constrained. You can set a drive time limit in seconds by adding a line like
+`maxPreTransitTime = 1200` to the routingDefaults section. If the limit is too high on a very large street graph, routing
+performance may suffer.
+
+
+## Boarding and alighting times
+
+Sometimes there is a need to configure a longer boarding or alighting times for specific modes, such as airplanes or ferries,
+where the check-in process needs to be done in good time before boarding. The boarding time is added to the time when going
+from the stop (offboard) vertex to the onboard vertex, and the alight time is added vice versa. The times are configured as
+seconds needed for the boarding and alighting processes in `router-config.json` as follows:
+
+```JSON
+{
+  "boardTimes": {
+    "AIRPLANE": 2700
+  },
+  "alightTimes": {
+    "AIRPLANE": 1200
+  }
+}
+```
 
 ## Timeouts
 
@@ -175,7 +341,7 @@ help identify problematic searches and improve our routing methods. The simplest
 ```JSON
 // router-config.json
 {
-  timeout: 5.5
+  "timeout": 5.5
 }
 ```
 
@@ -186,7 +352,7 @@ The alternative is:
 ```JSON
 // router-config.json
 {
-  timeouts: [5, 4, 3, 1]
+  "timeouts": [5, 4, 3, 1]
 }
 ```
 
@@ -200,6 +366,35 @@ response, providing more only when it won't hurt response time. The timeout valu
 reflect the decreasing marginal value of alternative itineraries: everyone wants at least one response, it's nice to
 have two for comparison, but we only care about having three, four, or more options if completing those extra searches
 doesn't cause annoyingly long response times.
+
+## Logging incoming requests
+
+You can log some characteristics of trip planning requests in a file for later analysis. Some transit agencies and
+operators find this information useful for identifying existing or unmet transportation demand. Logging will be
+performed only if you specify a log file name in the router config:
+
+```JSON
+// router-config.json
+{
+  "requestLogFile": "/var/otp/request.log"
+}
+```
+
+Each line in the resulting log file will look like this:
+
+`2016-04-19T18:23:13.486 0:0:0:0:0:0:0:1 ARRIVE 2016-04-07T00:17 WALK,BUS,CABLE_CAR,TRANSIT,BUSISH 45.559737193889966 -122.64999389648438 45.525592487765635 -122.39044189453124 6095 3 5864 3 6215 3`
+
+The fields are separated by whitespace and are (in order):
+
+1. Date and time the request was received
+2. IP address of the user
+3. Arrive or depart search
+4. The arrival or departure time
+5. A comma-separated list of all transport modes selected
+6. Origin latitude and longitude
+7. Destination latitude and longitude
+
+Finally, for each itinerary returned to the user, there is a travel duration in seconds and the number of transit vehicles used in that itinerary.
 
 
 ## Real-time data
@@ -226,8 +421,28 @@ or position relative to their scheduled stops.
 
 Besides GTFS-RT transit data, OTP can also fetch real-time data about bicycle rental networks including the number
 of bikes and free parking spaces at each station. We support bike rental systems from JCDecaux, BCycle, VCub, Keolis,
-Bixi, and the Dutch OVFiets system. It is straightforward to extend OTP to support any bike rental system that
+Bixi, the Dutch OVFiets system, ShareBike, GBFS and a generic KML format.
+It is straightforward to extend OTP to support any bike rental system that
 exposes a JSON API or provides KML place markers, though it requires writing a little code.
+
+The generic KML needs to be in format like
+
+```XML
+<?xml version="1.0" encoding="utf-8" ?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document id="root_doc">
+<Schema name="citybikes" id="citybikes">
+    <SimpleField name="ID" type="int"></SimpleField>
+</Schema>
+  <Placemark>
+    <name>A Bike Station</name>
+    <ExtendedData><SchemaData schemaUrl="#citybikes">
+        <SimpleData name="ID">0</SimpleData>
+    </SchemaData></ExtendedData>
+      <Point><coordinates>24.950682884886643,60.155923430488102</coordinates></Point>
+  </Placemark>
+</Document></kml>
+```
 
 ### Configuration
 
@@ -245,60 +460,112 @@ connect to a network resource is the `url` field.
 {
     // Routing defaults are any public field or setter in the Java class
     // org.opentripplanner.routing.core.RoutingRequest
-    routingDefaults: {
-        numItineraries: 6,
-        walkSpeed: 2.0,
-        stairsReluctance: 4.0,
-        carDropoffTime: 240
+    "routingDefaults": {
+        "numItineraries": 6,
+        "walkSpeed": 2.0,
+        "stairsReluctance": 4.0,
+        "carDropoffTime": 240
     },
 
-    updaters: [
+    "updaters": [
 
         // GTFS-RT service alerts (frequent polling)
         {
-            type: "real-time-alerts",
-            frequencySec: 30,
-            url: "http://developer.trimet.org/ws/V1/FeedSpecAlerts/appID/0123456789ABCDEF",
-            defaultAgencyId: "TriMet"
+            "type": "real-time-alerts",
+            "frequencySec": 30,
+            "url": "http://developer.trimet.org/ws/V1/FeedSpecAlerts/appID/0123456789ABCDEF",
+            "feedId": "TriMet"
         },
 
         // Polling bike rental updater.
-        // sourceType can be jcdecaux, b-cycle, bixi, keolis-rennes, ov-fiets, city-bikes, vcub
+        // sourceType can be: jcdecaux, b-cycle, bixi, keolis-rennes, ov-fiets,
+        // city-bikes, citi-bike-nyc, next-bike, vcub, kml
         {
-            type: "bike-rental",
-            frequencySec: 300,
-            sourceType: "city-bikes",
-            url: "http://host.domain.tld"
+            "type": "bike-rental",
+            "frequencySec": 300,
+            "sourceType": "city-bikes",
+            "url": "http://host.domain.tld"
         },
+
+        //<!--- San Francisco Bay Area bike share -->
+        {
+          "type": "bike-rental",
+          "frequencySec": 300,
+          "sourceType": "sf-bay-area",
+          "url": "http://www.bayareabikeshare.com/stations/json"
+        },
+
+        //<!--- Tampa Area bike share -->
+        {
+          "type": "bike-rental",
+          "frequencySec": 300,
+          "sourceType": "gbfs",
+          "url": "http://coast.socialbicycles.com/opendata/"
+        },
+
 
         // Polling bike rental updater for DC bikeshare (a Bixi system)
         // Negative update frequency means to run once and then stop updating (essentially static data)
         {
-            type: "bike-rental",
-            sourceType: "bixi",
-            url: "https://www.capitalbikeshare.com/data/stations/bikeStations.xml",
-            frequencySec: -1
+            "type": "bike-rental",
+            "sourceType": "bixi",
+            "url": "https://www.capitalbikeshare.com/data/stations/bikeStations.xml",
+            "frequencySec": -1
 		},
 
         // Bike parking availability
         {
-            type: "bike-park"
-        }
+            "type": "bike-park"
+        },
 
         // Polling for GTFS-RT TripUpdates)
         {
-            type: "stop-time-updater",
-            frequencySec: 60,
+            "type": "stop-time-updater",
+            "frequencySec": 60,
             // this is either http or file... shouldn't it default to http or guess from the presence of a URL?
-            sourceType: "gtfs-http",
-            url: "http://developer.trimet.org/ws/V1/TripUpdate/appID/0123456789ABCDEF",
-            defaultAgencyId: "TriMet"
+            "sourceType": "gtfs-http",
+            "url": "http://developer.trimet.org/ws/V1/TripUpdate/appID/0123456789ABCDEF",
+            "feedId": "TriMet"
         },
 
         // Streaming differential GTFS-RT TripUpdates over websockets
         {
-            type: "websocket-gtfs-rt-updater"
+            "type": "websocket-gtfs-rt-updater"
+        },
+
+        // OpenTraffic data
+        {
+          "type": "opentraffic-updater",
+          "frequencySec": -1,
+          // relative to OTP's working directory, where is traffic data stored.
+          // Should have subdirectories z/x/y.traffic.pbf (i.e. a tile tree of traffic tiles)
+          "tileDirectory": "traffic"
         }
     ]
 }
 ```
+#### GBFS Configuration
+
+Steps to add a GBFS feed to a router:
+
+- Add one entry in the `updater` field of `router-config.json` in the format
+
+```JSON
+{
+     "type": "bike-rental",
+     "frequencySec": 60,
+     "sourceType": "gbfs",
+     "url": "http://coast.socialbicycles.com/opendata/"
+}
+```
+
+- Follow these instructions to fill these fields:
+
+```
+type: "bike-rental"
+frequencySec: frequency in seconds in which the GBFS service will be polled
+sourceType: "gbfs"
+url: the URL of the GBFS feed (do not include the gbfs.json at the end) *
+```
+\* For a list of known GBFS feeds see the [list of known GBFS feeds](https://github.com/NABSA/gbfs/blob/master/systems.csv)
+

@@ -15,27 +15,27 @@ package org.opentripplanner.routing.impl;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Collection;
+import java.util.Currency;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.onebusaway.gtfs.model.AgencyAndId;
-import org.onebusaway.gtfs.model.FareAttribute;
+import org.opentripplanner.routing.core.Fare;
 import org.opentripplanner.routing.core.FareRuleSet;
 import org.opentripplanner.routing.core.TraverseMode;
+import org.opentripplanner.routing.core.Fare.FareType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SFBayFareServiceImpl extends DefaultFareServiceImpl {
 
-    public SFBayFareServiceImpl(
-            HashMap<AgencyAndId, FareRuleSet>   fareRules,
-            HashMap<AgencyAndId, FareAttribute> fareAttributes) {
-        super(fareRules, fareAttributes);
+    public SFBayFareServiceImpl(Collection<FareRuleSet> regularFareRules) {
+        addFareRules(FareType.regular, regularFareRules);
     }
 
     private static final long serialVersionUID = 20120229L;
+    @SuppressWarnings("unused")
     private static final Logger LOG = LoggerFactory.getLogger(SFBayFareServiceImpl.class);
 
     public static final int SFMTA_TRANSFER_DURATION = 60 * 90;
@@ -49,7 +49,19 @@ public class SFBayFareServiceImpl extends DefaultFareServiceImpl {
     public static final String SFMTA_BART_FREE_TRANSFER_STOP = "DALY";
     
     @Override
-    public float getLowestCost(List<Ride> rides) {
+    protected boolean populateFare(Fare fare, Currency currency, FareType fareType, List<Ride> rides,
+            Collection<FareRuleSet> fareRules) {
+        float lowestCost = getLowestCost(fareType, rides, fareRules);
+        if(lowestCost != Float.POSITIVE_INFINITY) {
+            fare.addFare(fareType, getMoney(currency, lowestCost));
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    protected float getLowestCost(FareType fareType, List<Ride> rides,
+            Collection<FareRuleSet> fareRules) {
         List<Ride> bartBlock = null;
         Long sfmtaTransferIssued = null;
         Long alightedBart = null;
@@ -68,7 +80,7 @@ public class SFBayFareServiceImpl extends DefaultFareServiceImpl {
             } else { // non-BART agency
                 if (bartBlock != null) {
                     // finalize outstanding bart block, if any
-                    cost += calculateCost(bartBlock);
+                    cost += calculateCost(fareType, bartBlock, fareRules);
                     bartBlock = null;
                 }
                 if (agencyId.equals("SFMTA")) {
@@ -101,7 +113,7 @@ public class SFBayFareServiceImpl extends DefaultFareServiceImpl {
         }
         if (bartBlock != null) {
             // finalize outstanding bart block, if any
-            cost += calculateCost(bartBlock);
+            cost += calculateCost(fareType, bartBlock, fareRules);
         }        
         return cost;
     }

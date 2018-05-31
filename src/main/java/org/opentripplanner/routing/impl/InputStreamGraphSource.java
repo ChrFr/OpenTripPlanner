@@ -13,27 +13,20 @@
 
 package org.opentripplanner.routing.impl;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.MissingNode;
+import com.google.common.io.ByteStreams;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Graph.LoadLevel;
 import org.opentripplanner.routing.services.GraphSource;
 import org.opentripplanner.routing.services.StreetVertexIndexFactory;
-import org.opentripplanner.standalone.OTPMain;
 import org.opentripplanner.standalone.Router;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.io.ByteStreams;
+import java.io.*;
 
 /**
  * The primary implementation of the GraphSource interface. The graph is loaded from a serialized
@@ -125,6 +118,7 @@ public class InputStreamGraphSource implements GraphSource {
             if (preEvict) {
                 synchronized (preEvictMutex) {
                     if (router != null) {
+                        LOG.info("Reloading '{}': pre-evicting router", routerId);
                         router.shutdown();
                     }
                     /*
@@ -140,6 +134,7 @@ public class InputStreamGraphSource implements GraphSource {
                 if (newRouter != null) {
                     // Load OK
                     if (router != null) {
+                        LOG.info("Reloading '{}': post-evicting router", routerId);
                         router.shutdown();
                     }
                     router = newRouter; // Assignment in java is atomic
@@ -214,8 +209,7 @@ public class InputStreamGraphSource implements GraphSource {
                 newGraph = Graph.load(new ObjectInputStream(is), loadLevel,
                         streetVertexIndexFactory);
             } catch (Exception ex) {
-                LOG.error("Exception while loading graph '{}'.", routerId);
-                ex.printStackTrace();
+                LOG.error("Exception while loading graph '{}'.", routerId, ex);
                 return null;
             }
 
@@ -229,12 +223,14 @@ public class InputStreamGraphSource implements GraphSource {
         // Even if a config file is not present on disk one could be bundled inside.
         try (InputStream is = streams.getConfigInputStream()) {
             JsonNode config = MissingNode.getInstance();
+            // TODO reuse the exact same JSON loader from OTPConfigurator
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.configure(JsonParser.Feature.ALLOW_COMMENTS, true);
+            mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
             if (is != null) {
-                // TODO reuse the exact same JSON loader from OTPConfigurator
-                ObjectMapper mapper = new ObjectMapper();
-                mapper.configure(JsonParser.Feature.ALLOW_COMMENTS, true);
-                mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
                 config = mapper.readTree(is);
+            } else if (newGraph.routerConfig != null) {
+                config = mapper.readTree(newGraph.routerConfig);
             }
             Router newRouter = new Router(routerId, newGraph);
             newRouter.startup(config);
@@ -386,8 +382,7 @@ public class InputStreamGraphSource implements GraphSource {
                 }
 
             } catch (Exception ex) {
-                LOG.error("Exception while storing graph to {}.", sourceFile.getPath());
-                ex.printStackTrace();
+                LOG.error("Exception while storing graph to {}.", sourceFile.getPath(), ex);
                 return false;
             }
 

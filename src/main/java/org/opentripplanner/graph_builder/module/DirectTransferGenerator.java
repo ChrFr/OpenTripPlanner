@@ -13,18 +13,23 @@
 
 package org.opentripplanner.graph_builder.module;
 
-import java.util.*;
-
 import com.google.common.collect.Iterables;
 import org.opentripplanner.graph_builder.annotation.StopNotLinkedForTransfers;
 import org.opentripplanner.graph_builder.services.GraphBuilderModule;
-import org.opentripplanner.routing.edgetype.*;
+import org.opentripplanner.routing.edgetype.PathwayEdge;
+import org.opentripplanner.routing.edgetype.SimpleTransfer;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.GraphIndex;
 import org.opentripplanner.routing.vertextype.TransitStop;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * {@link org.opentripplanner.graph_builder.services.GraphBuilderModule} module that links up the stops of a transit network among themselves. This is necessary for
@@ -39,7 +44,7 @@ public class DirectTransferGenerator implements GraphBuilderModule {
 
     private static Logger LOG = LoggerFactory.getLogger(DirectTransferGenerator.class);
 
-    int maxDuration = 60 * 10;
+    final double radiusMeters;
 
     public List<String> provides() {
         return Arrays.asList("linking");
@@ -49,16 +54,19 @@ public class DirectTransferGenerator implements GraphBuilderModule {
         return Arrays.asList("street to transit");
     }
 
+    public DirectTransferGenerator (double radiusMeters) {
+        this.radiusMeters = radiusMeters;
+    }
+
     @Override
     public void buildGraph(Graph graph, HashMap<Class<?>, Object> extra) {
-
         /* Initialize graph index which is needed by the nearby stop finder. */
         if (graph.index == null) {
             graph.index = new GraphIndex(graph);
         }
 
         /* The linker will use streets if they are available, or straight-line distance otherwise. */
-        NearbyStopFinder nearbyStopFinder = new NearbyStopFinder(graph, maxDuration);
+        NearbyStopFinder nearbyStopFinder = new NearbyStopFinder(graph, radiusMeters);
         if (nearbyStopFinder.useStreets) {
             LOG.info("Creating direct transfer edges between stops using the street network from OSM...");
         } else {
@@ -72,7 +80,9 @@ public class DirectTransferGenerator implements GraphBuilderModule {
 
             /* Skip stops that are entrances to stations or whose entrances are coded separately */
             if (!ts0.isStreetLinkable()) continue;
-            nLinkableStops += 1;
+            if (++nLinkableStops % 1000 == 0) {
+                LOG.info("Linked {} stops", nLinkableStops);
+            }
             LOG.debug("Linking stop '{}' {}", ts0.getStop(), ts0);
 
             /* Determine the set of stops that are already reachable via other pathways or transfers */
@@ -91,7 +101,7 @@ public class DirectTransferGenerator implements GraphBuilderModule {
             for (NearbyStopFinder.StopAtDistance sd : nearbyStopFinder.findNearbyStopsConsideringPatterns(ts0)) {
                 /* Skip the origin stop, loop transfers are not needed. */
                 if (sd.tstop == ts0 || pathwayDestinations.contains(sd.tstop)) continue;
-                new SimpleTransfer(ts0, sd.tstop, sd.dist, sd.geom);
+                new SimpleTransfer(ts0, sd.tstop, sd.dist, sd.geom, sd.edges);
                 n += 1;
             }
             LOG.debug("Linked stop {} to {} nearby stops on other patterns.", ts0.getStop(), n);

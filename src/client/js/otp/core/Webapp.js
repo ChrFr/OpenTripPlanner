@@ -62,8 +62,23 @@ otp.core.Webapp = otp.Class({
             decode = function (s) { return decodeURIComponent(s.replace(pl, " ")); },
             query  = window.location.search.substring(1);
 
-        while (match = search.exec(query))
-            this.urlParams[decode(match[1])] = decode(match[2]);
+        //Parser URL query string
+        while (match = search.exec(query)) {
+            var currentKey = decode(match[1]);
+            //Same key already appeared in parameters
+            //We need to change values from string to to list of values
+            if (currentKey in this.urlParams) {
+                var tmpValues = this.urlParams[currentKey];
+                if ($.isArray(tmpValues)) {
+                    tmpValues.push(decode(match[2]));
+                } else {
+                    tmpValues = [tmpValues, decode(match[2])];
+                }
+                this.urlParams[currentKey] = tmpValues;
+            } else {
+                this.urlParams[currentKey] = decode(match[2]);
+            }
+        }
 
 
         // init siteUrl, if necessary
@@ -260,10 +275,10 @@ otp.core.Webapp = otp.Class({
         }
 
 
-
-        // create the session manager, if needed
+        // set up any user-authenticated modules (e.g. Calltaker, FieldTrip)
         if(authModules.length > 0) {
 
+            // check for Trinet-authenticated modules
             var verifyLoginUrl, redirectUrl;
             for(var i = 0; i < authModules.length; i++) {
                 var authModule = authModules[i];
@@ -276,22 +291,29 @@ otp.core.Webapp = otp.Class({
 
             }
 
-            this.sessionManager = new otp.core.TrinetSessionManager(this, verifyLoginUrl, redirectUrl, $.proxy(function() {
+            // define the callback to be invoked by the session manager upon successful initialization
+            var sessionCallback = function() {
                 var setActive = false;
                 for(var i = 0; i < authModules.length; i++) {
                     var authModule = authModules[i];
-                    var roleIndex = authModule.authUserRoles.indexOf(this.sessionManager.role);
+                    var roleIndex = authModule.authUserRoles.indexOf(this_.sessionManager.role);
                     if(roleIndex !== -1) {
-                        this.addModule(authModule);
+                        this_.addModule(authModule);
                         if((roleIndex === 0 || authModule.config.isDefault) && !setActive) {
                             this_.setActiveModule(authModule);
                             setActive = true;
                         }
                     }
                 }
-            }, this));
-        }
+            };
 
+            if(verifyLoginUrl && redirectUrl) { // use Trinet-specific session manager
+                this.sessionManager = new otp.core.TrinetSessionManager(this, verifyLoginUrl, redirectUrl, sessionCallback);
+            }
+            else { // use default (non-Trinet) session manager
+                this.sessionManager = new otp.core.DefaultSessionManager(this, sessionCallback);
+            }
+        }
 
         // add the spinner
 

@@ -13,13 +13,7 @@
 
 package org.opentripplanner.routing.graph;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
-
-import javax.xml.bind.annotation.XmlTransient;
-
+import com.vividsolutions.jts.geom.LineString;
 import org.onebusaway.gtfs.model.Trip;
 import org.opentripplanner.common.MavenVersion;
 import org.opentripplanner.routing.core.RoutingRequest;
@@ -27,7 +21,12 @@ import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.util.IncrementingIdGenerator;
 import org.opentripplanner.routing.util.UniqueIdGenerator;
 
-import com.vividsolutions.jts.geom.LineString;
+import javax.xml.bind.annotation.XmlTransient;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.Locale;
 
 /**
  * This is the standard implementation of an edge with fixed from and to Vertex instances;
@@ -169,8 +168,21 @@ public abstract class Edge implements Serializable {
         return 0;
     }
 
+
+    /**
+     * Gets english localized name
+     * @return english localized name
+     */
     public abstract String getName();
 
+    /**
+     * Gets wanted localization
+     * @param locale wanted locale
+     * @return Localized in specified locale name
+     */
+    public abstract String getName(Locale locale);
+
+    // TODO Add comments about what a "bogus name" is.
     public boolean hasBogusName() {
         return false;
     }

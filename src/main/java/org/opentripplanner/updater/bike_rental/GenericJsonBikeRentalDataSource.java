@@ -2,9 +2,9 @@ package org.opentripplanner.updater.bike_rental;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.prefs.Preferences;
 
 import org.opentripplanner.updater.JsonConfigurable;
 import org.opentripplanner.routing.bike_rental.BikeRentalStation;
@@ -27,37 +27,38 @@ public abstract class GenericJsonBikeRentalDataSource implements BikeRentalDataS
 
     private static final Logger log = LoggerFactory.getLogger(GenericJsonBikeRentalDataSource.class);
     private String url;
-    private String apiKey;
+    private String headerName;
+    private String headerValue;
 
     private String jsonParsePath;
 
-    ArrayList<BikeRentalStation> stations = new ArrayList<BikeRentalStation>();
+    List<BikeRentalStation> stations = new ArrayList<BikeRentalStation>();
 
     /**
      * Construct superclass
      *
-     * @param JSON path to get from enclosing elements to nested rental list.
+     * @param jsonPath JSON path to get from enclosing elements to nested rental list.
      *        Separate path levels with '/' For example "d/list"
      *
      */
     public GenericJsonBikeRentalDataSource(String jsonPath) {
         jsonParsePath = jsonPath;
-        apiKey= null;
+        headerName = "Default";
+        headerValue = null;
     }
 
     /**
-     * Construct superclass
      *
-     * @param JSON path to get from enclosing elements to nested rental list.
+     * @param jsonPath path to get from enclosing elements to nested rental list.
      *        Separate path levels with '/' For example "d/list"
-     * @param Api key, when used by bike rental type
-     *
+     * @param headerName header name
+     * @param headerValue header value
      */
-    public GenericJsonBikeRentalDataSource(String jsonPath, String apiKeyValue) {
+    public GenericJsonBikeRentalDataSource(String jsonPath, String headerName, String headerValue) {
         jsonParsePath = jsonPath;
-        apiKey = apiKeyValue;
+        this.headerName = headerName;
+        this.headerValue = headerValue;
     }
-
 
     /**
      * Construct superclass where rental list is on the top level of JSON code
@@ -70,7 +71,18 @@ public abstract class GenericJsonBikeRentalDataSource implements BikeRentalDataS
     @Override
     public boolean update() {
         try {
-            InputStream data = HttpUtils.getData(url, "ApiKey", apiKey);
+            InputStream data = null;
+        	
+        	URL url2 = new URL(url);
+        	
+            String proto = url2.getProtocol();
+            if (proto.equals("http") || proto.equals("https")) {
+            	data = HttpUtils.getData(url, headerName, headerValue);
+            } else {
+                // Local file probably, try standard java
+                data = url2.openStream();
+            }
+
             if (data == null) {
                 log.warn("Failed to get data from url " + url);
                 return false;
@@ -90,10 +102,9 @@ public abstract class GenericJsonBikeRentalDataSource implements BikeRentalDataS
         return true;
     }
 
-    private void parseJSON(InputStream dataStream) throws JsonProcessingException, IllegalArgumentException,
-      IOException {
+    private void parseJSON(InputStream dataStream) throws IllegalArgumentException, IOException {
 
-        ArrayList<BikeRentalStation> out = new ArrayList<BikeRentalStation>();
+        ArrayList<BikeRentalStation> out = new ArrayList<>();
 
         String rentalString = convertStreamToString(dataStream);
 
@@ -113,6 +124,7 @@ public abstract class GenericJsonBikeRentalDataSource implements BikeRentalDataS
         }
 
         for (int i = 0; i < rootNode.size(); i++) {
+            // TODO can we use foreach? for (JsonNode node : rootNode) ...
             JsonNode node = rootNode.get(i);
             if (node == null) {
                 continue;
@@ -151,6 +163,10 @@ public abstract class GenericJsonBikeRentalDataSource implements BikeRentalDataS
 
     public String getUrl() {
         return url;
+    }
+    
+    public void setUrl(String url) {
+    	this.url = url;
     }
 
     public abstract BikeRentalStation makeStation(JsonNode rentalStationNode);

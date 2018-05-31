@@ -53,7 +53,7 @@ public class OSMFilter {
         if (way.isGeneralAccessDenied()) {
             // There are exceptions.
             return (way.isMotorcarExplicitlyAllowed() || way.isBicycleExplicitlyAllowed() || way
-                    .isPedestrianExplicitlyAllowed());
+                    .isPedestrianExplicitlyAllowed() || way.isMotorVehicleExplicitlyAllowed());
         }
 
         return true;
@@ -92,7 +92,7 @@ public class OSMFilter {
         if (entity.isGeneralAccessDenied()) {
             // this can actually be overridden
             permission = StreetTraversalPermission.NONE;
-            if (entity.isMotorcarExplicitlyAllowed()) {
+            if (entity.isMotorcarExplicitlyAllowed() || entity.isMotorVehicleExplicitlyAllowed()) {
                 permission = permission.add(StreetTraversalPermission.CAR);
             }
             if (entity.isBicycleExplicitlyAllowed()) {
@@ -105,21 +105,21 @@ public class OSMFilter {
             permission = def;
         }
 
-        if (entity.isMotorcarExplicitlyDenied()) {
+        if (entity.isMotorcarExplicitlyDenied() || entity.isMotorVehicleExplicitlyDenied()) {
             permission = permission.remove(StreetTraversalPermission.CAR);
-        } else if (entity.hasTag("motorcar")) {
+        } else if (entity.isMotorcarExplicitlyAllowed() || entity.isMotorVehicleExplicitlyAllowed()) {
             permission = permission.add(StreetTraversalPermission.CAR);
         }
 
         if (entity.isBicycleExplicitlyDenied()) {
             permission = permission.remove(StreetTraversalPermission.BICYCLE);
-        } else if (entity.hasTag("bicycle")) {
+        } else if (entity.isBicycleExplicitlyAllowed()) {
             permission = permission.add(StreetTraversalPermission.BICYCLE);
         }
 
         if (entity.isPedestrianExplicitlyDenied()) {
             permission = permission.remove(StreetTraversalPermission.PEDESTRIAN);
-        } else if (entity.hasTag("foot")) {
+        } else if (entity.isPedestrianExplicitlyAllowed()) {
             permission = permission.add(StreetTraversalPermission.PEDESTRIAN);
         }
 
@@ -141,7 +141,7 @@ public class OSMFilter {
      * @return
      */
     public static StreetTraversalPermission getPermissionsForWay(OSMWay way,
-            StreetTraversalPermission def, Graph graph) {
+            StreetTraversalPermission def, Graph graph, boolean banDiscouragedWalking, boolean banDiscouragedBiking) {
         StreetTraversalPermission permissions = getPermissionsForEntity(way, def);
 
         /*
@@ -169,6 +169,11 @@ public class OSMFilter {
             permissions = permissions.remove(StreetTraversalPermission.PEDESTRIAN);
         }
 
+        // Check for foot=discouraged, if applicable
+        if(banDiscouragedWalking && way.hasTag("foot") && way.getTag("foot").equals("discouraged")) {
+            permissions = permissions.remove(StreetTraversalPermission.PEDESTRIAN);
+        }
+
         // Compute bike permissions, check consistency.
         boolean forceBikes = false;
         if (way.isBicycleExplicitlyAllowed()) {
@@ -176,7 +181,8 @@ public class OSMFilter {
             forceBikes = true;
         }
 
-        if (way.isBicycleDismountForced()) {
+        if (way.isBicycleDismountForced() ||
+                (banDiscouragedBiking && way.hasTag("bicycle") && way.getTag("bicycle").equals("discouraged"))) {
             permissions = permissions.remove(StreetTraversalPermission.BICYCLE);
             if (forceBikes) {
                 LOG.warn(graph.addBuilderAnnotation(new ConflictingBikeTags(way.getId())));
@@ -184,6 +190,11 @@ public class OSMFilter {
         }
 
         return permissions;
+    }
+
+    public static StreetTraversalPermission getPermissionsForWay(OSMWay way,
+            StreetTraversalPermission def, Graph graph) {
+        return getPermissionsForWay(way, def, graph, false, false);
     }
 
     /**

@@ -5,25 +5,22 @@ import com.beust.jcommander.internal.Sets;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
+
 import org.opentripplanner.api.resource.CoordinateArrayListSequence;
 import org.opentripplanner.api.resource.SimpleIsochrone;
 import org.opentripplanner.common.geometry.GeometryUtils;
 import org.opentripplanner.common.geometry.PackedCoordinateSequence;
 import org.opentripplanner.common.geometry.SphericalDistanceLibrary;
 import org.opentripplanner.routing.algorithm.EarliestArrivalSearch;
-import org.opentripplanner.routing.automata.DFA;
-import org.opentripplanner.routing.automata.Nonterminal;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.core.State;
 import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.edgetype.StreetEdge;
-import org.opentripplanner.routing.edgetype.StreetTransitLink;
 import org.opentripplanner.routing.edgetype.TripPattern;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.graph.Vertex;
 import org.opentripplanner.routing.impl.StreetVertexIndexServiceImpl;
-import org.opentripplanner.routing.pathparser.PathParser;
 import org.opentripplanner.routing.services.StreetVertexIndexService;
 import org.opentripplanner.routing.spt.GraphPath;
 import org.opentripplanner.routing.spt.ShortestPathTree;
@@ -32,9 +29,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-
-import static org.opentripplanner.routing.automata.Nonterminal.seq;
-import static org.opentripplanner.routing.automata.Nonterminal.star;
 
 /**
  * These library functions are used by the streetless and streetful stop linkers, and in profile transfer generation.
@@ -49,10 +43,9 @@ public class NearbyStopFinder {
 
     public  final boolean useStreets;
     private Graph graph;
-    private double radius;
+    private double radiusMeters;
 
     /* Fields used when finding stops via the street network. */
-    private PathParser parsers[];
     private EarliestArrivalSearch earliestArrivalSearch;
 
     /* Fields used when finding stops without a street network. */
@@ -62,24 +55,27 @@ public class NearbyStopFinder {
      * Construct a NearbyStopFinder for the given graph and search radius, choosing whether to search via the street
      * network or straight line distance based on the presence of OSM street data in the graph.
      */
-    public NearbyStopFinder(Graph graph, double radius) {
-        this (graph, radius, graph.hasStreets);
+    public NearbyStopFinder(Graph graph, double radiusMeters) {
+        this (graph, radiusMeters, graph.hasStreets);
     }
 
     /**
      * Construct a NearbyStopFinder for the given graph and search radius.
      * @param useStreets if true, search via the street network instead of using straight-line distance.
      */
-    public NearbyStopFinder(Graph graph, double radius, boolean useStreets) {
+    public NearbyStopFinder(Graph graph, double radiusMeters, boolean useStreets) {
         this.graph = graph;
         this.useStreets = useStreets;
-        this.radius = radius;
+        this.radiusMeters = radiusMeters;
         if (useStreets) {
-            parsers = new PathParser[] {new TransferFinderParser()};
             earliestArrivalSearch = new EarliestArrivalSearch();
-            earliestArrivalSearch.maxDuration = (int) radius; // FIXME assuming 1 m/sec, use hard distance limiting to match straight-line mode
+            // We need to accommodate straight line distance (in meters) but when streets are present we use an
+            // earliest arrival search, which optimizes on time. Ideally we'd specify in meters,
+            // but we don't have much of a choice here. Use the default walking speed to convert.
+            earliestArrivalSearch.maxDuration = (int) (radiusMeters / new RoutingRequest().walkSpeed);
         } else {
-            streetIndex = new StreetVertexIndexServiceImpl(graph); // FIXME use the one already in the graph if it exists
+            // FIXME use the vertex index already in the graph if it exists.
+            streetIndex = new StreetVertexIndexServiceImpl(graph);
         }
     }
 
@@ -135,7 +131,6 @@ public class NearbyStopFinder {
         RoutingRequest routingRequest = new RoutingRequest(TraverseMode.WALK);
         routingRequest.clampInitialWait = (0L);
         routingRequest.setRoutingContext(graph, originVertex, null);
-        routingRequest.rctx.pathParsers = parsers;
         ShortestPathTree spt = earliestArrivalSearch.getShortestPathTree(routingRequest);
 
         List<StopAtDistance> stopsFound = Lists.newArrayList();
@@ -165,9 +160,9 @@ public class NearbyStopFinder {
     public List<StopAtDistance> findNearbyStopsEuclidean (Vertex originVertex) {
         List<StopAtDistance> stopsFound = Lists.newArrayList();
         Coordinate c0 = originVertex.getCoordinate();
-        for (TransitStop ts1 : streetIndex.getNearbyTransitStops(c0, radius)) {
+        for (TransitStop ts1 : streetIndex.getNearbyTransitStops(c0, radiusMeters)) {
             double distance = SphericalDistanceLibrary.distance(c0, ts1.getCoordinate());
-            if (distance < radius) {
+            if (distance < radiusMeters) {
                 Coordinate coordinates[] = new Coordinate[] {c0, ts1.getCoordinate()};
                 StopAtDistance sd = new StopAtDistance(ts1, distance);
                 sd.geom = geometryFactory.createLineString(coordinates);
@@ -185,6 +180,7 @@ public class NearbyStopFinder {
         public TransitStop tstop;
         public double      dist;
         public LineString  geom;
+        public List<Edge>  edges;
 
         public StopAtDistance(TransitStop tstop, double dist) {
             this.tstop = tstop;
@@ -202,35 +198,6 @@ public class NearbyStopFinder {
 
     }
 
-    /** Accept only paths that leave a transit stop, pass through the street network, and end at another transit stop. */
-    private static class TransferFinderParser extends PathParser {
-
-        private static final int OTHER  = 0;
-        private static final int STREET = 1;
-        private static final int LINK   = 2;
-        private final org.opentripplanner.routing.automata.DFA DFA;
-
-        TransferFinderParser () {
-            Nonterminal streets = star(STREET);
-            Nonterminal itinerary = seq(LINK, streets, LINK);
-            DFA = itinerary.toDFA().minimize();
-        }
-
-        @Override
-        public int terminalFor (State state) {
-            Edge edge = state.getBackEdge();
-            if (edge instanceof StreetEdge) return STREET;
-            if (edge instanceof StreetTransitLink) return LINK;
-            return OTHER;
-        }
-
-        @Override
-        protected DFA getDFA () {
-            return this.DFA;
-        }
-
-    }
-
     /**
      * Given a State at a TransitStop, bundle the TransitStop together with information about how far away it is
      * and the geometry of the path leading up to the given State.
@@ -241,6 +208,7 @@ public class NearbyStopFinder {
         double distance = 0.0;
         GraphPath graphPath = new GraphPath(state, false);
         CoordinateArrayListSequence coordinates = new CoordinateArrayListSequence();
+        List<Edge> edges = new ArrayList<>();
         for (Edge edge : graphPath.edges) {
             if (edge instanceof StreetEdge) {
                 LineString geometry = edge.getGeometry();
@@ -253,6 +221,7 @@ public class NearbyStopFinder {
                 }
                 distance += edge.getDistance();
             }
+            edges.add(edge);
         }
         if (coordinates.size() < 2) {   // Otherwise the walk step generator breaks.
             ArrayList<Coordinate> coordinateList = new ArrayList<Coordinate>(2);
@@ -263,6 +232,7 @@ public class NearbyStopFinder {
         }
         StopAtDistance sd = new StopAtDistance((TransitStop) state.getVertex(), distance);
         sd.geom = geometryFactory.createLineString(new PackedCoordinateSequence.Double(coordinates.toCoordinateArray()));
+        sd.edges = edges;
         return sd;
     }
 

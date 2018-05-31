@@ -14,7 +14,6 @@
 package org.opentripplanner.updater.alerts;
 
 import java.io.InputStream;
-import java.util.prefs.Preferences;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.opentripplanner.routing.graph.Graph;
@@ -22,6 +21,7 @@ import org.opentripplanner.routing.impl.AlertPatchServiceImpl;
 import org.opentripplanner.routing.services.AlertPatchService;
 import org.opentripplanner.updater.GraphUpdaterManager;
 import org.opentripplanner.updater.GraphWriterRunnable;
+import org.opentripplanner.updater.GtfsRealtimeFuzzyTripMatcher;
 import org.opentripplanner.updater.PollingGraphUpdater;
 import org.opentripplanner.util.HttpUtils;
 import org.slf4j.Logger;
@@ -39,7 +39,7 @@ import com.google.transit.realtime.GtfsRealtime.FeedMessage;
  * myalert.frequencySec = 60
  * myalert.url = http://host.tld/path
  * myalert.earlyStartSec = 3600
- * myalert.defaultAgencyId = TA
+ * myalert.feedId = TA
  * </pre>
  */
 public class GtfsRealtimeAlertsUpdater extends PollingGraphUpdater {
@@ -51,7 +51,9 @@ public class GtfsRealtimeAlertsUpdater extends PollingGraphUpdater {
 
     private String url;
 
-    private String defaultAgencyId;
+    private String feedId;
+
+    private GtfsRealtimeFuzzyTripMatcher fuzzyTripMatcher;
 
     private AlertPatchService alertPatchService;
 
@@ -75,18 +77,22 @@ public class GtfsRealtimeAlertsUpdater extends PollingGraphUpdater {
         }
         this.url = url;
         this.earlyStart = config.path("earlyStartSec").asInt(0);
-        this.defaultAgencyId = config.path("defaultAgencyId").asText();
-        LOG.info("Creating real-time alert updater running every {} seconds : {}", frequencySec, url);
+        this.feedId = config.path("feedId").asText();
+        if (config.path("fuzzyTripMatching").asBoolean(false)) {
+            this.fuzzyTripMatcher = new GtfsRealtimeFuzzyTripMatcher(graph.index);
+        }
+        LOG.info("Creating real-time alert updater running every {} seconds : {}", pollingPeriodSeconds, url);
     }
 
     @Override
-    public void setup() {
+    public void setup(Graph graph) {
         if (updateHandler == null) {
             updateHandler = new AlertsUpdateHandler();
         }
         updateHandler.setEarlyStart(earlyStart);
-        updateHandler.setDefaultAgencyId(defaultAgencyId);
+        updateHandler.setFeedId(feedId);
         updateHandler.setAlertPatchService(alertPatchService);
+        updateHandler.setFuzzyTripMatcher(fuzzyTripMatcher);
     }
 
     @Override

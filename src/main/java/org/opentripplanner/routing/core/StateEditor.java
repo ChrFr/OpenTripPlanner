@@ -20,11 +20,9 @@ import java.util.Set;
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.model.Stop;
 import org.onebusaway.gtfs.model.Trip;
-import org.opentripplanner.routing.automata.AutomatonState;
 import org.opentripplanner.routing.edgetype.TripPattern;
 import org.opentripplanner.routing.graph.Edge;
 import org.opentripplanner.routing.graph.Vertex;
-import org.opentripplanner.routing.pathparser.PathParser;
 import org.opentripplanner.routing.trippattern.TripTimes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -136,20 +134,17 @@ public class StateEditor {
                 return null;
             }
         }
-        if (!parsePath(this.child)) {
-            return null;
-        }
-
         spawned = true;
         return child;
     }
 
     public boolean weHaveWalkedTooFar(RoutingRequest options) {
-        // Only apply limit in transit-only case
-        if (!options.modes.isTransit())
-            return false;
+        // Only apply limit in transit-only case, unless this is a one-to-many request with hard
+        // walk limiting, in which case we want to cut off the search.
+        if (options.modes.isTransit() || !options.softWalkLimiting && options.batch)
+            return child.walkDistance >= options.maxWalkDistance;
 
-        return child.walkDistance >= options.maxWalkDistance;
+        return false;
     }
 
     public boolean isMaxPreTransitTimeExceeded(RoutingRequest options) {
@@ -267,6 +262,10 @@ public class StateEditor {
         cloneStateDataAsNeeded();
         child.stateData.previousTrip = previousTrip;
     }
+
+    public void setEnteredNoThroughTrafficArea() {
+        child.stateData.enteredNoThroughTrafficArea = true;
+    }
     
     /**
      * Initial wait time is recorded so it can be subtracted out of paths in lieu of "reverse optimization".
@@ -347,14 +346,16 @@ public class StateEditor {
         child.stateData.everBoarded = true;
     }
 
-    public void setBikeRenting(boolean bikeRenting) {
+    public void beginVehicleRenting(TraverseMode vehicleMode) {
         cloneStateDataAsNeeded();
-        child.stateData.usingRentedBike = bikeRenting;
-        if (bikeRenting) {
-            child.stateData.nonTransitMode = TraverseMode.BICYCLE;
-        } else {
-            child.stateData.nonTransitMode = TraverseMode.WALK;
-        }
+        child.stateData.usingRentedBike = true;
+        child.stateData.nonTransitMode = vehicleMode;
+    }
+
+    public void doneVehicleRenting() {
+        cloneStateDataAsNeeded();
+        child.stateData.usingRentedBike = false;
+        child.stateData.nonTransitMode = TraverseMode.WALK;
     }
 
     /**
@@ -420,6 +421,14 @@ public class StateEditor {
         child.stateData.usingRentedBike = state.stateData.usingRentedBike;
         child.stateData.carParked = state.stateData.carParked;
         child.stateData.bikeParked = state.stateData.bikeParked;
+    }
+
+    public void setNonTransitOptionsFromState(State state){
+        cloneStateDataAsNeeded();
+        child.stateData.nonTransitMode = state.getNonTransitMode();
+        child.stateData.carParked = state.isCarParked();
+        child.stateData.bikeParked = state.isBikeParked();
+        child.stateData.usingRentedBike = state.isBikeRenting();
     }
 
     /* PUBLIC GETTER METHODS */
@@ -497,37 +506,6 @@ public class StateEditor {
             child.stateData = child.stateData.clone();
     }
 
-    /** return true if all PathParsers advanced to a state other than REJECT */
-    public boolean parsePath(State state) {
-        if (state.stateData.opt.rctx == null)
-            return true; // a lot of tests don't set a routing context
-        PathParser[] parsers = state.stateData.opt.rctx.pathParsers;
-        int[] parserStates = state.pathParserStates;
-        boolean accept = true;
-        boolean modified = false;
-        int i = 0;
-        for (PathParser parser : parsers) {
-            int terminal = parser.terminalFor(state);
-            int oldState = parserStates[i];
-            int newState = parser.transition(oldState, terminal);
-            if (newState != oldState) {
-                if (!modified) {
-                    // clone the state array so only the new state will see modifications
-                    parserStates = parserStates.clone();
-                    modified = true;
-                }
-                parserStates[i] = newState;
-                if (newState == AutomatonState.REJECT)
-                    accept = false;
-            }
-            i++;
-        }
-        if (modified)
-            state.pathParserStates = parserStates;
-
-        return accept;
-    }
-
     public void alightTransit() {
         cloneStateDataAsNeeded();
         child.stateData.lastTransitWalk = child.getWalkDistance();
@@ -551,4 +529,9 @@ public class StateEditor {
         cloneStateDataAsNeeded();
         child.stateData.bikeRentalNetworks = networks;
     }
+
+    public boolean hasEnteredNoThroughTrafficArea() {
+        return child.hasEnteredNoThruTrafficArea();
+    }
+
 }

@@ -30,6 +30,7 @@ import org.opentripplanner.routing.edgetype.StreetTraversalPermission;
 import org.opentripplanner.routing.services.notes.NoteMatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.opentripplanner.util.I18NString;
 
 /**
  * Information given to the GraphBuilder about how to assign permissions, safety values, names, etc. to edges based on OSM tags.
@@ -78,16 +79,6 @@ public class WayPropertySet {
         // regex courtesy http://wiki.openstreetmap.org/wiki/Key:maxspeed
         // and edited
         maxSpeedPattern = Pattern.compile("^([0-9][\\.0-9]+?)(?:[ ]?(kmh|km/h|kmph|kph|mph|knots))?$");
-    }
-
-    public void setBase(WayPropertySetSource base) {
-       this.base = base;
-       WayPropertySet props = base.getWayPropertySet();
-       creativeNamers = props.creativeNamers;
-       defaultProperties = props.defaultProperties;
-       notes = props.notes;
-       slopeOverrides = props.slopeOverrides;
-       wayProperties = props.wayProperties;
     }
 
     /**
@@ -177,7 +168,7 @@ public class WayPropertySet {
         result.setSafetyFeatures(new P2<Double>(first, second));
     }
 
-    public String getCreativeNameForWay(OSMWithTags way) {
+    public I18NString getCreativeNameForWay(OSMWithTags way) {
         CreativeNamer bestNamer = null;
         int bestScore = 0;
         for (CreativeNamerPicker picker : creativeNamers) {
@@ -360,4 +351,47 @@ public class WayPropertySet {
         
         return metersSecond;
     }
+    
+	public void createNames(String spec, String patternKey) {
+		String pattern = patternKey;
+		CreativeNamer namer = new CreativeNamer(pattern);
+		addCreativeNamer(new OSMSpecifier(spec), namer);
+	}
+
+	public  void createNotes(String spec, String patternKey, NoteMatcher matcher) {
+		String pattern = patternKey;
+		// TODO: notes aren't localized
+		NoteProperties properties = new NoteProperties(pattern, matcher);
+		addNote(new OSMSpecifier(spec), properties);
+	}
+
+	public void setProperties(String spec,
+			StreetTraversalPermission permission) {
+		setProperties( spec, permission, 1.0, 1.0);
+	}
+
+	/**
+	 * Note that the safeties here will be adjusted such that the safest street
+	 * has a safety value of 1, with all others scaled proportionately.
+	 */
+	public void setProperties(String spec,
+			StreetTraversalPermission permission, double safety, double safetyBack) {
+		setProperties(spec, permission, safety, safetyBack, false);
+	}
+
+	public void setProperties(String spec,
+			StreetTraversalPermission permission, double safety, double safetyBack, boolean mixin) {
+		WayProperties properties = new WayProperties();
+		properties.setPermission(permission);
+		properties.setSafetyFeatures(new P2<Double>(safety, safetyBack));
+		addProperties(new OSMSpecifier(spec), properties, mixin);
+	}
+
+	public void setCarSpeed(String spec, float speed) {
+		SpeedPicker picker = new SpeedPicker();
+		picker.specifier = new OSMSpecifier(spec);
+		picker.speed = speed;
+		addSpeedPicker(picker);
+	}
+
 }

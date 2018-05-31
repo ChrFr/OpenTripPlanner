@@ -10,12 +10,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MappingJsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.GeometryFactory;
-import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
-import com.vividsolutions.jts.geom.PrecisionModel;
-
+import gnu.trove.map.TObjectIntMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 import org.geojson.LngLatAlt;
 import org.geotools.data.FileDataStore;
 import org.geotools.data.FileDataStoreFinder;
@@ -30,13 +29,11 @@ import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opentripplanner.analyst.pointset.PropertyMetadata;
+import org.opentripplanner.common.geometry.SphericalDistanceLibrary;
 import org.opentripplanner.routing.graph.Graph;
 import org.opentripplanner.routing.services.GraphService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import gnu.trove.map.TObjectIntMap;
-import gnu.trove.map.hash.TObjectIntHashMap;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -56,35 +53,40 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * PointSets serve as destinations in web analyst one-to-many indicators. They
- * can also serve as origins in many-to-many indicators.
+ * PointSets serve as named groups of destinations when calculating analyst one-to-many indicators. 
+ * They could also serve as origins in many-to-many indicators.
  * 
- * PointSets are one of the three main web analyst resources: Pointsets
- * Indicators TimeSurfaces
+ * PointSets are one of the three main web analyst resources: Pointsets, Indicators, and TimeSurfaces
  */
-public class PointSet implements Serializable{
+public class PointSet implements Serializable {
 
     private static final long serialVersionUID = -8962916330731463238L;
 
     private static final Logger LOG = LoggerFactory.getLogger(PointSet.class);
 
+    /** A server-unique identifier for this PointSet */
     public String id;
+
+    /** A short description of this PointSet for use in a legend or menu */
     public String label;
+
+    /** A detailed textual description of this PointSet */
     public String description;
 
     public Map<String, PropertyMetadata> propMetadata = new HashMap<String, PropertyMetadata>();
+    // TODO why is this concurrent? what two threads are modifying the hashmap simultaneously?
     public Map<String, int[]> properties = new ConcurrentHashMap<String, int[]>();
-    public int capacity = 0; // The total number of features this PointSet can
-    // hold.
+    public int capacity = 0; // The total number of features this PointSet can hold.
+
     /*
      * Connects this population to vertices in a given Graph (map of graph ids
      * to sample sets). Keeping as a graphId->sampleSet map to prevent
-     * duplication of pointset when used across multiple graphs
+     * duplication of pointset when used across multiple graphs.
      */
     private Map<String, SampleSet> samples = new ConcurrentHashMap<String, SampleSet>();
-    
+
     /**
-     * Map from string IDs to indices. This is a view into PointSet.ids.
+     * Map from string IDs to their array indices. This is a view into PointSet.ids, namely its reverse mapping.
      */
     private transient TObjectIntMap<String> idIndexMap;
 
@@ -96,24 +98,31 @@ public class PointSet implements Serializable{
     /*
      * In a detailed Indicator, the time to reach each target, for each origin.
      * Null in non-indicator pointsets.
+     * TODO remove this if unused, result sets are no longer PointSets.
      */
+    @Deprecated
     public int[][] times;
 
-    /**
-     * The geometries of the features. Each Attribute must contain an array of
-     * magnitudes with the same length as this list.
-     */
+    // The characteristics of the features in this PointSet. This is a column store.
+    // Each structured attribute must also contain an array of magnitudes with the same length as these arrays.
 
+    /** A unique identifier for each feature. */
     protected String[] ids;
+
+    /** The latitude of each feature (or its centroid if it's not a point). */
     protected double[] lats;
+
+    /** The longitude of each feature (or its centroid if it's not a point). */
     protected double[] lons;
-    protected Polygon[] polygons;
+
+    /** The polygon for each feature (which is reduced to a centroid point for routing purposes). */
+    protected Polygon[] polygons; // TODO what do we do when there are no polygons?
 
     /**
      * Rather than trying to load anything any everything, we stick to a strict
      * format and rely on other tools to get the data into the correct format.
      * This includes column headers in the category:subcategory:attribute format
-     * and coordinates in WGS84. Comments begin with a #.
+     * and coordinates in WGS84. Comment lines are allowed in these input files, and begin with a #.
      */
     public static PointSet fromCsv(File filename) throws IOException {
         /* First, scan through the file to count lines and check for errors. */
@@ -126,8 +135,7 @@ public class PointSet implements Serializable{
                 return null;
             }
         }
-        // getCurrentRecord is zero-based and does not include headers or blank
-        // lines.
+        // getCurrentRecord is zero-based and does not include headers or blank lines
         int nRecs = (int) reader.getCurrentRecord() + 1;
         reader.close();
         /* If we reached here, the file is entirely readable. Start over. */
@@ -141,6 +149,8 @@ public class PointSet implements Serializable{
         int latCol = -1;
         int lonCol = -1;
 
+        // An array of property magnitudes corresponding to each column in the input. 
+        // Some of these will remain null (specifically, the lat and lon columns which do not contain magnitudes)
         int[][] properties = new int[nCols][ret.capacity];
         for (int c = 0; c < nCols; c++) {
             String header = reader.getHeader(c);
@@ -177,7 +187,11 @@ public class PointSet implements Serializable{
         return ret;
     }
 
-    public static PointSet fromShapefile( File file ) throws IOException, NoSuchAuthorityCodeException, FactoryException, EmptyPolygonException, UnsupportedGeometryException {
+    public static PointSet fromShapefile(File file) throws NoSuchAuthorityCodeException, IOException, FactoryException, EmptyPolygonException, UnsupportedGeometryException {
+    	return fromShapefile(file, null, null);
+    }
+    
+    public static PointSet fromShapefile(File file, String originIDField, List<String> propertyFields) throws IOException, NoSuchAuthorityCodeException, FactoryException, EmptyPolygonException, UnsupportedGeometryException {
         if ( ! file.exists())
             throw new RuntimeException("Shapefile does not exist.");
 
@@ -192,7 +206,24 @@ public class PointSet implements Serializable{
         query.setCoordinateSystemReproject(WGS84);
         SimpleFeatureCollection featureCollection = featureSource.getFeatures(query);
 
+        // Set up fields based on first feature in collection
+        // This assumes that all features have the same set of properties, which I think is always the case for shapefiles
         SimpleFeatureIterator it = featureCollection.features();
+        SimpleFeature protoFt = it.next();
+        if (propertyFields == null) {
+        	propertyFields = new ArrayList<String>();
+        	// No property fields specified, so use all property fields
+        	for (Property p : protoFt.getProperties()) {
+        		propertyFields.add(p.getName().toString());
+        	}
+        	// If ID field is specified, don't use it as a property
+        	if (originIDField != null && propertyFields.contains(originIDField)) {
+        		propertyFields.remove(originIDField);
+        	}
+        }
+        
+        // Reset iterator
+        it = featureCollection.features();
 
         PointSet ret = new PointSet(featureCollection.size());
         int i=0;
@@ -202,33 +233,53 @@ public class PointSet implements Serializable{
 
             PointFeature ft = new PointFeature();
             ft.setGeom(geom);
+            
+            // Set feature's ID to the specified ID field, or to index if none is specified
+            if (originIDField == null) {
+            	ft.setId(Integer.toString(i));
+            } else {
+            	ft.setId(feature.getProperty(originIDField).getValue().toString());
+            }
+            
             for(Property prop : feature.getProperties() ){
-                Object binding = prop.getType().getBinding();
-
-                //attempt to coerce the prop's value into an integer
-                int val;
-                if(binding.equals(Integer.class)){
-                    val = (Integer)prop.getValue();
-                } else if(binding.equals(Long.class)){
-                    val = ((Long)prop.getValue()).intValue();
-                } else if(binding.equals(String.class)){
-                    try{
-                        val = Integer.parseInt((String)prop.getValue());
-                    } catch (NumberFormatException ex ){
-                        continue;
-                    }
-                } else {
-                    continue;
-                }
-
-                ft.addAttribute(prop.getName().toString(), val);
+            	String propName = prop.getName().toString();
+            	if (propertyFields.contains(propName)) {
+	                Object binding = prop.getType().getBinding();
+	
+	                //attempt to coerce the prop's value into an integer
+	                int val;
+	                if(binding.equals(Integer.class)){
+	                    val = (Integer)prop.getValue();
+	                } else if(binding.equals(Long.class)){
+	                    val = ((Long)prop.getValue()).intValue();
+	                } else if(binding.equals(String.class)){
+	                    try{
+	                        val = Integer.parseInt((String)prop.getValue());
+	                    } catch (NumberFormatException ex ){
+	                        continue;
+	                    }
+	                } else {
+	                	LOG.debug("Property {} of feature {} could not be interpreted as int, skipping", prop.getName().toString(), ft.getId());
+	                    continue;
+	                }
+	
+	                ft.addAttribute(propName, val);
+            	} else {
+            		LOG.debug("Property {} not requested; igoring", propName); 
+            	}
+            	
             }
 
             ret.addFeature(ft, i);
 
             i++;
         }
-
+        
+        ArrayList<String> IDlist = new ArrayList<String>();
+        for (String id : ret.ids) {
+        	IDlist.add(id);
+        }
+        LOG.debug("Created PointSet from shapefile with IDs {}", IDlist);
         return ret;
     }
 
@@ -251,6 +302,7 @@ public class PointSet implements Serializable{
 
     /**
      * Examines a JSON stream to see if it matches the expected OTPA format.
+     * TODO improve the level of detail of validation. Many files pass the validation and then crash the load function.
      * 
      * @return the number of features in the collection if it's valid, or -1 if
      *         it doesn't fit the OTPA format.
@@ -358,7 +410,7 @@ public class PointSet implements Serializable{
                 }
             }
         } catch (Exception ex) {
-            LOG.error("GeoJSON parsing failure: {}", ex.toString());
+            LOG.error("GeoJSON parsing failure", ex);
             return null;
         }
         return ret;
@@ -430,6 +482,16 @@ public class PointSet implements Serializable{
         return getSampleSet(g);
     }
 
+    // TODO refactor the other getSampleSet methods in terms of this one.
+    public SampleSet getOrCreateSampleSet(Graph graph) {
+        SampleSet sampleSet = this.samples.get(graph.routerId);
+        if (sampleSet == null) {
+            sampleSet = new SampleSet(this, graph.getSampleFactory());
+            this.samples.put(graph.routerId, sampleSet);
+        }
+        return sampleSet;
+    }
+
     /** 
      * gets a sample set for a graph object -- does not require graph service to be set 
      * @param g a graph objects
@@ -471,11 +533,8 @@ public class PointSet implements Serializable{
         for (Entry<String,Integer> ad : feat.getProperties().entrySet()) {
             String propId = ad.getKey();
             Integer propVal = ad.getValue();
-
             this.getOrCreatePropertyForId(propId);
             this.properties.get(propId)[index] = propVal;
-
-
         }
     }
 
@@ -486,7 +545,7 @@ public class PointSet implements Serializable{
             try {
                 ret.setGeom(polygons[index]);
             } catch (Exception e) {	
-                // The polygon is clean; this should never happen. We
+                // The polygon is known to be clean; this should never happen. We
                 // could pass the exception up but that'd just make the calling
                 // function deal with an exception that will never pop. So
                 // we'll make the compiler happy by catching it here silently.
@@ -524,11 +583,6 @@ public class PointSet implements Serializable{
     /**
      * Gets the Category object for the given ID, creating it if it doesn't
      * exist.
-     * 
-     * @param id
-     *            the id for the category alone, not the fully-specified
-     *            category:property.
-     * @return a Category with the given ID.
      */
     public PropertyMetadata getOrCreatePropertyForId(String id) {
         PropertyMetadata property = propMetadata.get(id);
@@ -553,8 +607,7 @@ public class PointSet implements Serializable{
      */
     public void writeJson(OutputStream out, Boolean forcePoints) {
         try {
-            JsonFactory jsonFactory = new JsonFactory(); // ObjectMapper.getJsonFactory()
-            // is better
+            JsonFactory jsonFactory = new JsonFactory(); // ObjectMapper.getJsonFactory() is better
             JsonGenerator jgen = jsonFactory.createGenerator(out);
             jgen.setCodec(new ObjectMapper());
             jgen.writeStartObject();
@@ -590,41 +643,25 @@ public class PointSet implements Serializable{
             if (description != null)
                 jgen.writeStringField("description", description);
 
-            // writes schema as a flat namespace with cat_id and
-            // cat_id:prop_id interleaved
-
             jgen.writeObjectFieldStart("schema");
             {
-
                 for (PropertyMetadata cat : this.propMetadata.values()) {
-
                     jgen.writeObjectFieldStart(cat.id);
                     {
                         if (cat.label != null)
                             jgen.writeStringField("label", cat.label);
-                        jgen.writeStringField("type", "Category");
-
                         if (cat.style != null && cat.style.attributes != null) {
-
                             jgen.writeObjectFieldStart("style");
                             {
-
                                 for (String styleKey : cat.style.attributes.keySet()) {
                                     jgen.writeStringField(styleKey, cat.style.attributes.get(styleKey));
                                 }
                             }
                             jgen.writeEndObject();
-
                         }
-
                     }
                     jgen.writeEndObject();
-
-                    // two-level hierarchy for now... could be extended
-                    // to recursively map
-                    // categories,sub-categories,attributes
                 }
-
             }
             jgen.writeEndObject();
         }
@@ -787,7 +824,8 @@ public class PointSet implements Serializable{
         // we check again if the map has been built. It's possible that it would have been built
         // by this method in another thread while this instantiation was blocked.
         if (idIndexMap == null) {
-            idIndexMap = new TObjectIntHashMap<String>(this.capacity, 1f, -1);
+            // make a local object, don't expose to public view until it's built
+            TObjectIntMap idIndexMap = new TObjectIntHashMap<String>(this.capacity, 1f, -1);
             
             for (int i = 0; i < this.capacity; i++) {
                 if (ids[i] != null) {
@@ -799,6 +837,56 @@ public class PointSet implements Serializable{
                     }
                 }
             }
+
+            // now expose to public view; reference assignment is an atomic operation
+            this.idIndexMap = idIndexMap;
         }
     }
+
+    public static PointSet regularGrid (Envelope envelope, double gridSizeMeters) {
+        // non-ideal but for now make a grid in projected space
+        // to see why this is wrong, look at a map of Iowa and note that it leans to the left
+        // This is because they started surveying the township and range system (which is a grid)
+        // from the east, and wound up further west in the north than the south, which led them
+        // to resurvey the baseline every 24 miles, which explains why one is often driving
+        // down a rural road in the midwestern US and comes to a point where the road makes two 90-
+        // degree curves in quick succession to reach the new survey baseline.
+        double gridSizeLat = SphericalDistanceLibrary.metersToDegrees(gridSizeMeters);
+        double gridSizeLon = SphericalDistanceLibrary.metersToLonDegrees(gridSizeMeters, (envelope.getMaxY() + envelope.getMinY()) / 2);
+
+        // how large will it be?
+        int npts = (int) (envelope.getHeight() / gridSizeLat + 1) * (int) (envelope.getWidth() / gridSizeLon + 1);
+
+        PointSet ret = new PointSet(npts);
+
+        int idx = 0;
+        for (double lon = envelope.getMinX(); lon < envelope.getMaxX(); lon += gridSizeLon) {
+            for (double lat = envelope.getMinY(); lat < envelope.getMaxY(); lat += gridSizeLat) {
+                PointFeature pf = new PointFeature("" + idx);
+                pf.setLat(lat);
+                pf.setLon(lon);
+                ret.addFeature(pf, idx++);
+            }
+        }
+
+        return ret;
+    }
+
+    /** Returns a new coordinate object for the feature at the given index in this set, or its centroid. */
+    public Coordinate getCoordinate(int index) {
+        return new Coordinate(lons[index], lats[index]);
+    }
+
+    /**
+     * Using getter methods here to allow generating coordinates and geometries on demand instead of storing them.
+     * This would allow for implicit geometry, as in a regular grid of points.
+     */
+    public double getLat (int i) {
+        return lats[i];
+    }
+
+    public double getLon (int i) {
+        return lons[i];
+    }
+
 }

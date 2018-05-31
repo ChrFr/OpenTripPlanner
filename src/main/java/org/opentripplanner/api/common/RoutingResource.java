@@ -15,7 +15,6 @@ package org.opentripplanner.api.common;
 
 import java.util.*;
 
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
@@ -25,7 +24,7 @@ import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
 
 import org.onebusaway.gtfs.model.AgencyAndId;
-import org.opentripplanner.api.parameter.QualifiedModeSetSequence;
+import org.opentripplanner.api.parameter.QualifiedModeSet;
 import org.opentripplanner.routing.core.OptimizeType;
 import org.opentripplanner.routing.core.RoutingRequest;
 import org.opentripplanner.routing.request.BannedStopSet;
@@ -34,6 +33,7 @@ import org.opentripplanner.standalone.Router;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.opentripplanner.util.ResourceBundleSingleton;
 /**
  * This class defines all the JAX-RS query parameters for a path search as fields, allowing them to 
  * be inherited by other REST resource classes (the trip planner and the Analyst WMS or tile 
@@ -166,7 +166,7 @@ public abstract class RoutingResource {
     
     /** The set of modes that a user is willing to use, with qualifiers stating whether vehicles should be parked, rented, etc. */
     @QueryParam("mode")
-    protected QualifiedModeSetSequence modes;
+    protected QualifiedModeSet modes;
 
     /** The minimum time, in seconds, between successive trips on different vehicles.
      *  This is designed to allow for imperfect schedule adherence.  This is a minimum;
@@ -333,7 +333,7 @@ public abstract class RoutingResource {
 
     @QueryParam("locale")
     private String locale;
-    
+
     /**
      * If true, realtime updates are ignored during this search.
      */
@@ -346,7 +346,22 @@ public abstract class RoutingResource {
      */
     @QueryParam("disableRemainingWeightHeuristic")
     protected Boolean disableRemainingWeightHeuristic;
-    
+
+    @QueryParam("maxHours")
+    private Double maxHours;
+
+    @QueryParam("useRequestedDateTimeInMaxHours")
+    private Boolean useRequestedDateTimeInMaxHours;
+
+    @QueryParam("disableAlertFiltering")
+    private Boolean disableAlertFiltering;
+
+    /**
+     * If true, the Graph's ellipsoidToGeoidDifference is applied to all elevations returned by this query.
+     */
+    @QueryParam("geoidElevation")
+    private Boolean geoidElevation;
+
     /* 
      * somewhat ugly bug fix: the graphService is only needed here for fetching per-graph time zones. 
      * this should ideally be done when setting the routing context, but at present departure/
@@ -405,8 +420,10 @@ public abstract class RoutingResource {
         if (numItineraries != null)
             request.setNumItineraries(numItineraries);
 
-        if (maxWalkDistance != null)
+        if (maxWalkDistance != null) {
             request.setMaxWalkDistance(maxWalkDistance);
+            request.maxTransferWalkDistance = maxWalkDistance;
+        }
 
         if (maxPreTransitTime != null)
             request.setMaxPreTransitTime(maxPreTransitTime);
@@ -513,7 +530,10 @@ public abstract class RoutingResource {
             request.setOptimize(optimize);
 
         /* Temporary code to get bike/car parking and renting working. */
-        if (modes != null) modes.applyToRequest(request);
+        if (modes != null) {
+            modes.applyToRoutingRequest(request);
+            request.setModes(request.modes);
+        }
 
         if (request.allowBikeRental && bikeSpeed == null) {
             //slower bike speed for bike sharing, based on empirical evidence from DC.
@@ -562,25 +582,20 @@ public abstract class RoutingResource {
         if (disableRemainingWeightHeuristic != null)
             request.disableRemainingWeightHeuristic = disableRemainingWeightHeuristic;
 
-        // TODO move into a setter on RoutingRequest
-        String localeSpec = locale != null ? locale : "en";
-        String[] localeSpecParts = localeSpec.split("_");
-        Locale locale;
-        switch (localeSpecParts.length) {
-            case 1:
-                locale = new Locale(localeSpecParts[0]);
-                break;
-            case 2:
-                locale = new Locale(localeSpecParts[0]);
-                break;
-            case 3:
-                locale = new Locale(localeSpecParts[0]);
-                break;
-            default:
-                LOG.debug("Bogus locale " + localeSpec + ", defaulting to en");
-                locale = new Locale("en");
-        }
-        request.locale = locale;
+        if (maxHours != null)
+            request.maxHours = maxHours;
+
+        if (useRequestedDateTimeInMaxHours != null)
+            request.useRequestedDateTimeInMaxHours = useRequestedDateTimeInMaxHours;
+
+        if (disableAlertFiltering != null)
+            request.disableAlertFiltering = disableAlertFiltering;
+
+        if (geoidElevation != null)
+            request.geoidElevation = geoidElevation;
+
+        //getLocale function returns defaultLocale if locale is null
+        request.locale = ResourceBundleSingleton.INSTANCE.getLocale(locale);
         return request;
     }
 

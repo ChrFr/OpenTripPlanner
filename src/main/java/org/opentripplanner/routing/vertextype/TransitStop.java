@@ -55,6 +55,8 @@ public class TransitStop extends TransitStationStop {
         super(graph, stop);
         this.wheelchairEntrance = stop.getWheelchairBoarding() != 2;
         isEntrance = stop.getLocationType() == 2;
+        //Adds this vertex into graph envelope so that we don't need to loop over all vertices
+        graph.expandToInclude(stop.getLon(), stop.getLat());
     }
 
     public boolean hasWheelchairEntrance() {
@@ -67,6 +69,11 @@ public class TransitStop extends TransitStationStop {
 
     public boolean hasEntrances() {
         for (Edge e : this.getOutgoing()) {
+            if (e instanceof PathwayEdge) {
+                return true;
+            }
+        }
+        for (Edge e : this.getIncoming()) {
             if (e instanceof PathwayEdge) {
                 return true;
             }

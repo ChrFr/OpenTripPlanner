@@ -16,12 +16,15 @@ package org.opentripplanner.api.model;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.TimeZone;
 
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 
+import org.onebusaway.gtfs.model.AgencyAndId;
+import org.opentripplanner.api.model.alertpatch.LocalizedAlert;
 import org.opentripplanner.routing.alertpatch.Alert;
 import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.util.model.EncodedPolylineBean;
@@ -108,6 +111,10 @@ public class Leg {
 
     @XmlAttribute
     @JsonSerialize
+    public String agencyBrandingUrl;
+
+    @XmlAttribute
+    @JsonSerialize
     public int agencyTimeZoneOffset;
 
     /**
@@ -131,9 +138,7 @@ public class Leg {
      * For transit legs, the ID of the route.
      * For non-transit legs, null.
      */
-    @XmlAttribute
-    @JsonSerialize
-    public String routeId = null;
+    public AgencyAndId routeId = null;
 
     /**
      * For transit leg, the route's text color (if one exists). For non-transit legs, null.
@@ -183,9 +188,7 @@ public class Leg {
      * For transit legs, the ID of the trip.
      * For non-transit legs, null.
      */
-    @XmlAttribute
-    @JsonSerialize
-    public String tripId = null;
+    public AgencyAndId tripId = null;
     
     /**
      * For transit legs, the service date of the trip.
@@ -194,8 +197,15 @@ public class Leg {
     @XmlAttribute
     @JsonSerialize
     public String serviceDate = null;
-    
-    /**
+
+     /**
+      * For transit leg, the route's branding URL (if one exists). For non-transit legs, null.
+      */
+     @XmlAttribute
+     @JsonSerialize
+     public String routeBrandingUrl = null;
+
+     /**
      * The Place where the leg originates.
      */
     public Place from = null;
@@ -226,17 +236,9 @@ public class Leg {
     @JsonProperty(value="steps")
     public List<WalkStep> walkSteps;
 
-    /**
-     * Deprecated field formerly used for notes -- will be removed.  See
-     * alerts
-     */
     @XmlElement
     @JsonSerialize
-    public List<Note> notes;
-
-    @XmlElement
-    @JsonSerialize
-    public List<Alert> alerts;
+    public List<LocalizedAlert> alerts;
 
     @XmlAttribute
     @JsonSerialize
@@ -279,27 +281,16 @@ public class Leg {
         return endTime.getTimeInMillis()/1000.0 - startTime.getTimeInMillis()/1000.0;
     }
 
-    public void addAlert(Alert alert) {
-        if (notes == null) {
-            notes = new ArrayList<Note>();
-        }
+    public void addAlert(Alert alert, Locale locale) {
         if (alerts == null) {
-            alerts = new ArrayList<Alert>();
+            alerts = new ArrayList<>();
         }
-        String text = alert.alertHeaderText.getSomeTranslation();
-        if (text == null) {
-            text = alert.alertDescriptionText.getSomeTranslation();
+        for (LocalizedAlert a : alerts) {
+            if (a.alert.equals(alert)) {
+                return;
+            }
         }
-        if (text == null) {
-            text = alert.alertUrl.getSomeTranslation();
-        }
-        Note note = new Note(text);
-        if (!notes.contains(note)) {
-            notes.add(note);
-        }
-        if (!alerts.contains(alert)) {
-            alerts.add(alert);
-        }
+        alerts.add(new LocalizedAlert(alert, locale));
     }
 
     public void setTimeZone(TimeZone timeZone) {
