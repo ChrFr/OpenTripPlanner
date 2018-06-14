@@ -17,6 +17,7 @@ public class OtpsResult implements Comparable<OtpsResult> {
     protected Date arrivalTime = null;   
     protected Date arrivalTransit = null; 
     protected Date startTransit = null; 
+    protected long distance = 0;
 	protected String modes = "unknown";
     protected Long waitingTime = null;
     protected Double elevationGained = null;
@@ -55,6 +56,9 @@ public class OtpsResult implements Comparable<OtpsResult> {
 	}
     public Date getArrivalTransit() {
 		return arrivalTransit;
+	}
+    public long getDistance() {
+		return distance;
 	}
     public String getArrivalTransit(String format) {
 		return formatDate(arrivalTransit, format);

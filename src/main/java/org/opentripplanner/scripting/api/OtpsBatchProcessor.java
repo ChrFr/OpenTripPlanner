@@ -201,8 +201,9 @@ public class OtpsBatchProcessor {
 		        evaluation.elevationLost = itinerary.elevationLost;
 		        
 		        Set<String> uniqueModes = new HashSet<>();
-		        
+		        long distance = 0;
 		        for (Leg leg: itinerary.legs){
+		        	distance += leg.distance;
 		        	if(!leg.mode.equals("WALK") && !leg.mode.equals("CAR")){		        		
 		        		evaluation.arrivalTransit = leg.endTime.getTime();
 		        		if (evaluation.startTransit == null)
@@ -210,6 +211,7 @@ public class OtpsBatchProcessor {
 		        	}
 		        	uniqueModes.add(leg.mode);
 		        }
+		        evaluation.distance = distance;
 		        evaluation.modes = uniqueModes.toString();
 		    }
 		}
