@@ -8,9 +8,9 @@ Java development are [Eclipse](http://eclipse.org), [IntelliJ IDEA](https://www.
 and any IDE with Maven build support should also work (ensure that you have the Maven plugins installed and enabled).
 Git integration is a plus since OTP is under Git version control.
 
-IntelliJ IDEA is a commercial product, but its authors give free licenses to open source projects and the OpenTripPlanner
-development community has received such a license. If you want to use IntelliJ just ask us for the license key. It's
-an excellent IDE, and in my experience is quicker and more stable than the competition.
+Many of the Core OTP developers use IntelliJ IDEA. It is an excellent IDE, and in my experience is quicker 
+and more stable than the competition. IntelliJ IDEA is a commercial product, but there is an open source "community edition"
+that is completely sufficient for working on OTP.
 
 Rather than using the version control support in my IDE, I usually find it more straightforward to clone the OTP GitHub
 repository manually (on the command line or using some other Git interface tool), then import the resulting local OTP
@@ -46,6 +46,11 @@ There are several ways to get involved:
  * Submit patches. If you're not yet a committer, please provide patches as pull requests citing the relevant issue.
    Even when you do have push access to the repository, pull requests are a good way to get feedback on changes.
 
+### Branches and Branch Protection
+
+As of January 2019, we have begun work on OTP 2.x and are using a Git branching model derived from [Gitflow](https://nvie.com/posts/a-successful-git-branching-model/). All development will occur on the `dev-1.x` and `dev-2.x` branches. Only release commits setting the Maven artifact version to a non-snapshot number should be pushed to the `master` branch of OTP. All other changes to master should result from fast-forward merges of a Github pull request from the `dev-1.x` branch. In turn, all changes to `dev-1.x` should result from a fast-forward merge of a Github pull request for a single feature, fix, or other change. These pull requests are subject to code review. We require two pull request approvals from OTP leadership committee members or designated code reviewers from two different organizations. We also have validation rules ensuring that the code compiles and all tests pass before pull requests can be merged.
+
+The `dev-2.x` branch is managed similarly to `dev-1.x` but because it's rapidly changing experimental code worked on by relatively few people, we require only one pull request approval from a different organization than the author. Merges will not occur into `master` from `dev-2.x` until that branch is sufficiently advanced and receives approval from the OTP project leadership committee.
 
 ### Issues and commits
 
@@ -169,7 +174,7 @@ are not included in mainline OTP.
 ### Java
 
 OpenTripPlanner uses the same code formatting and style as the [GeoTools](http://www.geotools.org/) and 
-[GeoServer](htp://geoserver.org) projects. It's a minor variant of the 
+[GeoServer](http://geoserver.org) projects. It's a minor variant of the
 [Sun coding convention](http://www.oracle.com/technetwork/java/codeconv-138413.html). Notably, **we do not use tabs** 
 for indentation and we allow for lines up to 100 characters wide.
 
@@ -222,38 +227,66 @@ As of #206, we follow [Crockford's JavaScript code conventions](http://javascrip
 
 ## Continuous Integration
 
-The OpenTripPlanner project has a [continuous integration (CI) server](http://ci.opentripplanner.org). Any time a change
-is pushed to the main OpenTripPlanner repository on GitHub, this server will compile and test the new code, providing
-feedback on the stability of the build. It is also configured to run a battery of speed tests so that we can track
-improvements due to optimizations and spot drops in performance as an unintended consequence of changes.
+The OpenTripPlanner project uses the [Travis CI continuous integration system](https://travis-ci.org/opentripplanner/OpenTripPlanner). Any time a change
+is pushed to the main OpenTripPlanner repository on GitHub, this server will compile and test the new code, providing feedback on the stability of the build.
 
 ## Release Process
 
-This section is intended as a checklist for the person within the OTP development community who is responsible for
-performing releases (currently Andrew Byrd). Releases should be performed on the CI server because documentation and
-release JARs must be published after a release. The CI server serves as the OTP project web server, and also has a
-very fast network connection which makes uploading Maven artifacts to the repository on Amazon S3 less painful.
-Carrying out a release requires CI server login credentials as well as Amazon AWS credentials for deployment to our
-Maven repository.
+This section serves as a checklist for the person responsible for performing releases (currently Andrew Byrd).
+Note that much of this mimics the actions taken by the Maven release plugin. Based on past experience,
+the release plugin can fail at various points in the process leaving the repo in a confusing state.
+Taking each action manually is more annoying but keeps eyes on each step and is less prone to failure.
 
-Release checklist:
+* Check that you are at the HEAD of master branch with no uncommitted changes
+    * `git status`
+    * `git clean -df`
+    * `git pull`
+* Verify that all dependencies in the POM are non-SNAPSHOT versions
+* Update `docs/Changelog.md`
+    * Items should have been added/updated as each pull request was merged
+    * Update the header at the top of the list from x.y.z-SNAPSHOT to just x.y.z (current date)
+    * Add a new section header at the top of the list for the next iteration: x.y+1.0-SNAPSHOT
+    * Check in any changes, and push to Github
+* Check on Travis that the build is currently passing
+    * https://travis-ci.org/opentripplanner/OpenTripPlanner/builds
+* Bump the SNAPSHOT version in the POM to the release version
+    * Edit version in POM, removing SNAPSHOT and increasing version numbers as needed (semantic-release)
+    * `git add pom.xml`
+    * `git commit -m "prepare release x.y.z"`
+* Run a test build of the release locally, without deploying it
+    * `mvn clean package site`
+    * This will sign the Maven artifacts so you need the signing certificate set up
+    * All tests should pass
+    * This will also create Enunciate API docs and Javadoc containing the correct non-snapshot version number
+* Deploy documentation to AWS S3
+    * You have to do this right after the test release build to ensure the right version number in the docs
+    * You will need AWSCLI tools (`sudo pip install -U awscli`)
+    * `aws s3 cp --recursive target/site/apidocs s3://dev.opentripplanner.org/javadoc/x.y.z --acl public-read`
+    * `aws s3 cp --recursive target/site/enunciate/apidocs s3://dev.opentripplanner.org/apidoc/x.y.z --acl public-read`
+    * Check that docs are readable and show the correct version via the Javadoc landing page at `dev.opentripplanner.org`
+* Finally, tag and push this release to make it official
+    * `git tag -a vX.Y.Z -m "release X.Y.X"`
+    * `git push origin vX.Y.Z` (will trigger a Travis CI build and deployment)
+* Begin development on the next iteration
+    * Edit minor version in POM to X.(Y+1).0-SNAPSHOT
+    * `git add pom.xml`
+    * `git commit -m "Prepare next development iteration X.(Y+1).0-SNAPSHOT"`
+    * `git push`
+* Check that Travis CI build of the release tag succeeded
+    *  https://travis-ci.org/opentripplanner/OpenTripPlanner/builds
+    *  Check the end of the build log to make sure the Maven artifacts were uploaded
+* Check that Maven artifact appears on Maven Central
+    * OTP artifacts are at http://repo2.maven.org/maven2/org/opentripplanner/otp/1.3.0/
+    * This can sometimes take half an hour after Travis uploads the artifacts
+* Email the OTP dev and users mailing lists
 
-- update docs/Changelog.md, check in changes, and push
-- ssh into ci.opentripplanner.org
-- change to the ~/git/OpenTripPlanner directory
-- check that you are on the master branch with no uncommitted changes (git status; git clean -df)
-- pull down the latest master code
-- verify that git push succeeds without prompting for a password (i.e. ~/.ssh/id_rsa.pub is known to Github)
-- run a test build: mvn clean package site
-- check that `~/.m2/settings.xml` contains AWS credentials for the repo
-- mvn release:prepare (use the default release version and SCM release tag, bump the minor development version number)
-- cp -R target/site/apidocs /usr/share/nginx/html/javadoc/x.y.0
-- cp -R target/site/enunciate /usr/share/nginx/html/apidoc/x.y.0
-- check that all docs in /usr/share/nginx/html/javadoc/ have o+r permissions (they should be by default)
-- mvn release:perform
-- cp target/checkout/target/otp-x.y.0-shaded.jar /usr/share/nginx/html/jars/
-- rm /usr/share/nginx/html/jars/otp-x.y.0-SNAPSHOT*
-- check http://dev.opentripplanner.org/jars/ and http://dev.opentripplanner.org/javadoc/ in a browser
-- update the version numbers that appear in Basic-Usage, Developers-Guide, Getting-OTP, and index.md and check them in
-- email the OTP dev and users mailing lists, and send a message on Slack
+TODO Elaborate on:
+- Signing Certificate
+- AWS IAM credentials
+- Sonatype-OSS staging / Maven artifact deployment
+- Merging dev branches into master ("git flow")
+- Release from master should happen _automatically_ once version is changed
+- ONLY one commit must have a particular non-snapshot commit (the tagged commit that constitutes the release)
+- Add final steps: `git checkout dev-1.x`; `git merge master` (primarily to update the POM version)
+
 

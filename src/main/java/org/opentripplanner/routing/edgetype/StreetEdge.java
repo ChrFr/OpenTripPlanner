@@ -1,16 +1,3 @@
-/* This program is free software: you can redistribute it and/or
- modify it under the terms of the GNU Lesser General Public License
- as published by the Free Software Foundation, either version 3 of
- the License, or (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>. */
-
 package org.opentripplanner.routing.edgetype;
 
 import com.google.common.collect.Iterables;
@@ -30,7 +17,6 @@ import org.opentripplanner.routing.vertextype.OsmVertex;
 import org.opentripplanner.routing.vertextype.SplitterVertex;
 import org.opentripplanner.routing.vertextype.StreetVertex;
 import org.opentripplanner.routing.vertextype.TemporarySplitterVertex;
-import org.opentripplanner.traffic.StreetSpeedSnapshot;
 import org.opentripplanner.util.BitSetUtils;
 import org.opentripplanner.util.I18NString;
 import org.opentripplanner.util.NonLocalizedString;
@@ -559,18 +545,6 @@ public class StreetEdge extends Edge implements Cloneable {
             return Double.NaN;
         } else if (traverseMode.isDriving()) {
             // NOTE: Automobiles have variable speeds depending on the edge type
-            if (options.useTraffic) {
-                // the expected speed based on traffic
-                StreetSpeedSnapshot source = options.getRoutingContext().streetSpeedSnapshot;
-
-                if (source != null) {
-                    double congestedSpeed = source.getSpeed(this, traverseMode, timeMillis);
-
-                    if (!Double.isNaN(congestedSpeed))
-                        return congestedSpeed;
-                }
-            }
-
             return calculateCarSpeed(options);
         }
         return options.getSpeed(traverseMode);
@@ -808,6 +782,10 @@ public class StreetEdge extends Edge implements Cloneable {
             e1 = new StreetEdge((StreetVertex) fromv, v, geoms.first, name, 0, permission, this.isBack());
             e2 = new StreetEdge(v, (StreetVertex) tov, geoms.second, name, 0, permission, this.isBack());
 
+            // copy the wayId to the split edges, so we can trace them back to their parent if need be
+            e1.wayId = this.wayId;
+            e2.wayId = this.wayId;
+
             // figure the lengths, ensuring that they sum to the length of this edge
             e1.calculateLengthFromGeometry();
             e2.calculateLengthFromGeometry();
@@ -827,6 +805,16 @@ public class StreetEdge extends Edge implements Cloneable {
                 double frac = (double) e2.length_mm / (e1.length_mm + e2.length_mm);
                 e2.length_mm = (int) (length_mm * frac);
                 e1.length_mm = length_mm - e2.length_mm;
+            }
+
+            // TODO: better handle this temporary fix to handle bad edge distance calculation
+            if (e1.length_mm < 0) {
+                LOG.error("Edge 1 ({}) split at vertex at {},{} has length {} mm. Setting to 1 mm.", e1.wayId, v.getLat(), v.getLon(), e1.length_mm);
+                e1.length_mm = 1;
+            }
+            if (e2.length_mm < 0) {
+                LOG.error("Edge 2 ({}) split at vertex at {},{}  has length {} mm. Setting to 1 mm.", e2.wayId, v.getLat(), v.getLon(), e2.length_mm);
+                e2.length_mm = 1;
             }
 
             if (e1.length_mm < 0 || e2.length_mm < 0) {

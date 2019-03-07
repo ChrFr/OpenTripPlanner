@@ -1,20 +1,9 @@
-/* This program is free software: you can redistribute it and/or
- modify it under the terms of the GNU Lesser General Public License
- as published by the Free Software Foundation, either version 3 of
- the License, or (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>. */
-
 package org.opentripplanner.routing.core;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -33,8 +22,14 @@ public class Fare {
      */
     public HashMap<FareType, Money> fare;
 
+    /**
+     * A mapping from {@link FareType} to a list of {@link FareComponent}.
+     */
+    public HashMap<FareType, List<FareComponent>> details;
+
     public Fare() {
         fare = new HashMap<FareType, Money>();
+        details = new HashMap<FareType, List<FareComponent>>();
     }
 
     public Fare(Fare aFare) {
@@ -51,8 +46,20 @@ public class Fare {
         fare.put(fareType, new Money(currency, cents));
     }
 
+    public void addFare(FareType fareType, Money money) {
+        fare.put(fareType, money);
+    }
+
+    public void addFareDetails(FareType fareType, List<FareComponent> newDetails) {
+        details.put(fareType, newDetails);
+    }
+
     public Money getFare(FareType type) {
         return fare.get(type);
+    }
+
+    public List<FareComponent> getDetails(FareType type) {
+        return details.get(type);
     }
 
     public void addCost(int surcharge) {

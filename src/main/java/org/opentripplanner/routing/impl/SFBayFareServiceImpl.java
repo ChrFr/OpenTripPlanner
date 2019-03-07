@@ -1,25 +1,14 @@
-/* This program is free software: you can redistribute it and/or
- modify it under the terms of the GNU Lesser General Public License
- as published by the Free Software Foundation, either version 3 of
- the License, or (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>. */
-
 package org.opentripplanner.routing.impl;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Currency;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.opentripplanner.routing.core.Fare;
 import org.opentripplanner.routing.core.FareRuleSet;
 import org.opentripplanner.routing.core.TraverseMode;
 import org.opentripplanner.routing.core.Fare.FareType;
@@ -46,6 +35,17 @@ public class SFBayFareServiceImpl extends DefaultFareServiceImpl {
             "EMBR", "MONT", "POWL", "CIVC", "16TH", "24TH", "GLEN", "BALB", "DALY"));
     public static final String SFMTA_BART_FREE_TRANSFER_STOP = "DALY";
     
+    @Override
+    protected boolean populateFare(Fare fare, Currency currency, FareType fareType, List<Ride> rides,
+            Collection<FareRuleSet> fareRules) {
+        float lowestCost = getLowestCost(fareType, rides, fareRules);
+        if(lowestCost != Float.POSITIVE_INFINITY) {
+            fare.addFare(fareType, getMoney(currency, lowestCost));
+            return true;
+        }
+        return false;
+    }
+
     @Override
     protected float getLowestCost(FareType fareType, List<Ride> rides,
             Collection<FareRuleSet> fareRules) {

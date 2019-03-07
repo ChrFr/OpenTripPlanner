@@ -1,29 +1,18 @@
-/* This program is free software: you can redistribute it and/or
- modify it under the terms of the GNU Lesser General Public License
- as published by the Free Software Foundation, either version 3 of
- the License, or (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>. */
-
 package org.opentripplanner;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 
-import org.onebusaway.gtfs.model.calendar.CalendarServiceData;
+import org.opentripplanner.model.calendar.CalendarServiceData;
 import org.opentripplanner.graph_builder.module.StreetLinkerModule;
 import org.opentripplanner.gtfs.GtfsContext;
 import org.opentripplanner.gtfs.GtfsLibrary;
-import org.opentripplanner.routing.edgetype.factory.GTFSPatternHopFactory;
+import org.opentripplanner.routing.edgetype.factory.PatternHopFactory;
 import org.opentripplanner.routing.edgetype.factory.TransferGraphLinker;
 import org.opentripplanner.routing.graph.Graph;
+
+import static org.opentripplanner.calendar.impl.CalendarServiceDataFactoryImpl.createCalendarServiceData;
 
 public class ConstantsForTests {
 
@@ -34,6 +23,8 @@ public class ConstantsForTests {
     public static final String KCM_GTFS = "src/test/resources/kcm_gtfs.zip";
     
     public static final String FAKE_GTFS = "src/test/resources/testagency.zip";
+
+    public static final String FARE_COMPONENT_GTFS = "src/test/resources/farecomponent_gtfs.zip";
 
     private static ConstantsForTests instance = null;
 
@@ -70,14 +61,16 @@ public class ConstantsForTests {
         try {
             portlandContext = GtfsLibrary.readGtfs(new File(ConstantsForTests.PORTLAND_GTFS));
             portlandGraph = new Graph();
-            GTFSPatternHopFactory factory = new GTFSPatternHopFactory(portlandContext);
+            PatternHopFactory factory = new PatternHopFactory(portlandContext);
             factory.run(portlandGraph);
             TransferGraphLinker linker = new TransferGraphLinker(portlandGraph);
             linker.run();
             // TODO: eliminate GTFSContext
             // this is now making a duplicate calendarservicedata but it's oh so practical
-            portlandGraph.putService(CalendarServiceData.class, 
-                    GtfsLibrary.createCalendarServiceData(portlandContext.getDao()));
+            portlandGraph.putService(
+                    CalendarServiceData.class,
+                    createCalendarServiceData(portlandContext.getOtpTransitService())
+            );
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e);
@@ -96,9 +89,12 @@ public class ConstantsForTests {
             return null;
         }
         Graph graph = new Graph();
-        GTFSPatternHopFactory factory = new GTFSPatternHopFactory(context);
+        PatternHopFactory factory = new PatternHopFactory(context);
         factory.run(graph);
-        graph.putService(CalendarServiceData.class, GtfsLibrary.createCalendarServiceData(context.getDao()));
+        graph.putService(
+                CalendarServiceData.class,
+                createCalendarServiceData(context.getOtpTransitService())
+        );
         return graph;
     }
 

@@ -3,8 +3,8 @@ package org.opentripplanner.index.model;
 import java.util.Collection;
 import java.util.List;
 
-import org.onebusaway.gtfs.model.AgencyAndId;
-import org.onebusaway.gtfs.model.Stop;
+import org.opentripplanner.model.FeedScopedId;
+import org.opentripplanner.model.Stop;
 
 import com.beust.jcommander.internal.Lists;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -12,11 +12,12 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 public class StopShort {
 
-    public AgencyAndId id;
+    public FeedScopedId id;
     public String code;
     public String name;
     public double lat;
     public double lon;
+    public String url;
     public String cluster;
 
     /** Distance to the stop when it is returned from a location-based query. */
@@ -28,6 +29,7 @@ public class StopShort {
         name = stop.getName();
         lat = stop.getLat();
         lon = stop.getLon();
+        url = stop.getUrl();
         cluster = stop.getParentStation(); // TODO harmonize these names, maybe use "station" everywhere
     }
 
