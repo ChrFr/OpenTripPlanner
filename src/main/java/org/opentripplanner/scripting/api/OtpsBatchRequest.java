@@ -118,4 +118,8 @@ public class OtpsBatchRequest extends OtpsRoutingRequest {
     public void setThreads(int threads){
     	this.threads = threads;
     }
+
+    public void setWheelchairAccessible(boolean wheelchairAccessible) {
+        req.wheelchairAccessible = wheelchairAccessible;
+    }
 }

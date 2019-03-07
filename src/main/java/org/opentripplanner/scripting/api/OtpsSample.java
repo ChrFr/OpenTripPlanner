@@ -108,7 +108,7 @@ public class OtpsSample extends Sample {
 		Itinerary itinerary;
 		double walkSpeed = spt.getOptions().walkSpeed;
 		try{
-			itinerary = GraphPathToTripPlanConverter.generateItinerary(path, true, new Locale("en"));
+			itinerary = GraphPathToTripPlanConverter.generateItinerary(path, true, false, new Locale("en"));
 		}
 		// paths with start = endpoint are trivial (no traverse)
 		catch (TrivialPathException e){
