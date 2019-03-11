@@ -187,7 +187,7 @@ public class SurfaceResource extends RoutingResource {
        
         MIMEImageFormat imageFormat = new MIMEImageFormat("image/png");
         RenderRequest renderRequest =
-                new RenderRequest(imageFormat, Layer.TRAVELTIME, Style.COLOR30, true, false);
+                new RenderRequest(imageFormat, Layer.TRAVELTIME, Style.BLUEYELLOW, true, false);
         // TODO why can't the renderer be static?
         Router router = otpServer.getRouter(surfA.routerId);
         return router.renderer.getResponse(tileRequest, surfA, null, renderRequest);

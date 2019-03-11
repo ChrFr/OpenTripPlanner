@@ -107,7 +107,7 @@ otp.modules.analyst.AnalystModule =
         var params = {
             batch : true,
             layers : 'traveltime',
-            styles : 'color30',
+            styles : 'blueyellow',
             time : (this.time) ? this.time : moment().format("h:mma"),
             date : (this.date) ? moment(this.date, otp.config.locale.time.date_format).format("MM-DD-YYYY") : moment().format("MM-DD-YYYY"),
             mode : this.mode,

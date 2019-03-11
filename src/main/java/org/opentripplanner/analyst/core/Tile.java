@@ -87,6 +87,14 @@ public abstract class Tile {
         {120, 200,   0, 200,  0} 
     }); 
     
+    private static final IndexColorModel ICM_BLUE_TO_YELLOW_15 = interpolatedColorMap( new int[][] { 
+        {0,     0,   0,   102, 255},          
+        {45,    0, 204,     0, 255},  
+        {90,  255, 255,   102, 255},
+        {120,  255, 255,   102,   0},
+        {180,   0,   0,     0,   0},
+    }); 
+        
     private static final IndexColorModel ICM_STEP_COLOR_15 = interpolatedColorMap( new int[][] { 
         {-128, 100, 100, 100, 200}, // for unreachable places 
         {0,   100, 100, 100,  0},  
@@ -176,6 +184,7 @@ public abstract class Tile {
     static {
         modelsByStyle = new EnumMap<Style, IndexColorModel>(Style.class);
         modelsByStyle.put(Style.COLOR30, ICM_STEP_COLOR_15);
+        modelsByStyle.put(Style.BLUEYELLOW, ICM_BLUE_TO_YELLOW_15);
         modelsByStyle.put(Style.DIFFERENCE, ICM_DIFFERENCE_15);
         modelsByStyle.put(Style.TRANSPARENT, ICM_GRAY_60); 
         modelsByStyle.put(Style.MASK, ICM_MASK_60);

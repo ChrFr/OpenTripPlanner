@@ -5,5 +5,6 @@ public enum Style {
     DIFFERENCE, 
     TRANSPARENT,
     MASK,
-    BOARDINGS
+    BOARDINGS,
+    BLUEYELLOW
 }
