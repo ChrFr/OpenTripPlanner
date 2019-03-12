@@ -88,9 +88,9 @@ public abstract class Tile {
     }); 
     
     private static final IndexColorModel ICM_BLUE_TO_YELLOW_15 = interpolatedColorMap( new int[][] { 
-        {0,     0,   0,   102, 255},          
-        {45,    0, 204,     0, 255},  
-        {90,  255, 255,   102, 255},
+    	{0,     0,   0,   102, 150},
+        {45,    0, 204,     0, 150},  
+        {90,  255, 255,   102, 100},
         {120,  255, 255,   102,   0},
         {180,   0,   0,     0,   0},
     }); 
